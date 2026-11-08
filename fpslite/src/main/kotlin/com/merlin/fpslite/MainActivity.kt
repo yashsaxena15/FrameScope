@@ -157,9 +157,9 @@ class MainActivity : Activity() {
         check(root, "CPU frequency per core cluster", prefs.showCpuFreq) { prefs.showCpuFreq = it }
         hint(root, "Shown as efficiency | performance | prime cores, in GHz (e.g. 1.0|0.6|0.8 GHz)")
         check(root, "RAM usage (system + current app)", prefs.showRam) { prefs.showRam = it }
-        check(root, "Virtual RAM (swap + memory extension)", prefs.showSwap) { prefs.showSwap = it }
+        check(root, "Swap (ZRAM + memory extension / virtual RAM)", prefs.showSwap) { prefs.showSwap = it }
         check(root, "GPU load + frequency (experimental — not accurate on MediaTek)", prefs.showGpu) { prefs.showGpu = it }
-        check(root, "Temperatures (CPU / GPU / battery)", prefs.showTemps) { prefs.showTemps = it }
+        check(root, "Temperatures (SoC / battery)", prefs.showTemps) { prefs.showTemps = it }
 
         section(root, "Appearance & sampling")
         slider(root, "Text size", 60, 200, (prefs.textScale * 100).toInt(), { "${it}%" }) { prefs.textScale = it / 100f }

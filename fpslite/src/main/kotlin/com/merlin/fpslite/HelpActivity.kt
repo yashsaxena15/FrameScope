@@ -43,8 +43,9 @@ class HelpActivity : Activity() {
         item("1.0|0.6|0.8 GHz", "current speed of each CPU core cluster: efficiency | performance | prime cores.")
         item("RAM 8.6/11.0G 79%", "RAM in use / RAM usable by Android (part of the advertised RAM is reserved by the system).")
         item("App 1.30G", "RAM used by the app currently in front (resident memory).")
-        item("VRAM 4.5/12.0G 38%", "virtual RAM in use: compressed swap (ZRAM) + storage \"memory extension\", combined.")
-        item("CPU / GPU / Bat °", "CPU, GPU and battery temperature from Android's thermal service.")
+        item("Swap 4.5/12.0G 38%", "swap in use: compressed ZRAM + the storage \"memory extension\" (virtual RAM), combined. Not GPU memory.")
+        item("SoC 55°", "chip temperature from Android's thermal service (the value the phone uses for throttling). Many phones, including HyperOS, report one chip-wide value, so CPU and GPU are not shown separately.")
+        item("Bat 42°", "battery temperature.")
         item("GPU*", "experimental GPU load/frequency from kernel trace events; not accurate on MediaTek chips.")
 
         section("Tips")

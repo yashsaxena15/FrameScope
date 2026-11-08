@@ -36,8 +36,7 @@ class Snapshot {
     var gpuBusy = -1f
     var gpuMHz = -1
     var gpuState = 0 // 1 ok, 0 waiting, -1 unavailable
-    var tCpu = Float.NaN
-    var tGpu = Float.NaN
+    var tSoc = Float.NaN
     var tBattery = Float.NaN
     var ramUsedMB = -1
     var ramTotalMB = -1
@@ -53,7 +52,7 @@ class Snapshot {
         cpuLoad = o.cpuLoad
         System.arraycopy(o.clusterMHz, 0, clusterMHz, 0, o.clusters); clusters = o.clusters
         gpuBusy = o.gpuBusy; gpuMHz = o.gpuMHz; gpuState = o.gpuState
-        tCpu = o.tCpu; tGpu = o.tGpu; tBattery = o.tBattery
+        tSoc = o.tSoc; tBattery = o.tBattery
         ramUsedMB = o.ramUsedMB; ramTotalMB = o.ramTotalMB; appRamMB = o.appRamMB
         swapUsedMB = o.swapUsedMB; swapTotalMB = o.swapTotalMB
     }
@@ -257,8 +256,11 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         if (wantTemps && now >= nextTempAt) {
             nextTempAt = now + 2000
             val t = ThermalParser.parse(svc.dump("thermalservice", emptyArray()) ?: "")
-            work.tCpu = t["CPU"] ?: t["SOC"] ?: Float.NaN
-            work.tGpu = t["GPU"] ?: Float.NaN
+            // HyperOS (and many vendors) report one chip-wide temperature under the
+            // CPU/GPU/NPU/SOC labels; show it once as "SoC" instead of implying
+            // separate CPU and GPU sensors. Prefer SOC, fall back to the hottest of CPU/GPU.
+            val soc = t["SOC"] ?: maxOfNonNull(t["CPU"], t["GPU"])
+            work.tSoc = soc ?: Float.NaN
             work.tBattery = t["BATTERY"] ?: Float.NaN
             if (work.tBattery.isNaN()) batteryOnlyTemp()
         }
@@ -363,6 +365,9 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             if (r[2] >= 0) work.gpuBusy = r[2] / 10f
         }
     }
+
+    private fun maxOfNonNull(a: Float?, b: Float?): Float? =
+        if (a == null) b else if (b == null) a else maxOf(a, b)
 
     private fun batteryOnlyTemp() {
         val i: Intent? = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))

@@ -106,7 +106,7 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
                     widest = maxOf(widest, textPaint.measureText("CPU 100% 2.4|3.3|3.7 GHz"))
                 }
                 if (preset == Prefs.PRESET_FULL && showTemps) {
-                    widest = maxOf(widest, textPaint.measureText("CPU 100° GPU 100° Bat 45°"))
+                    widest = maxOf(widest, textPaint.measureText("SoC 100° Bat 45°"))
                 }
                 widthPx = (widest + 2 * pad).toInt()
                 heightPx = (bigH + 2 * lineH + graphH + extraLines * lineH + 3 * pad).toInt()
@@ -207,7 +207,7 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
             y += lineH
             if (showSwap) {
                 sb.setLength(0)
-                sb.append("VRAM ")
+                sb.append("Swap ")
                 if (snap.swapTotalMB > 0 && snap.swapUsedMB >= 0) {
                     appendFixed(sb, snap.swapUsedMB / 1024f, 1); sb.append('/')
                     appendFixed(sb, snap.swapTotalMB / 1024f, 1); sb.append("G ")
@@ -235,9 +235,8 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         }
         if (showTemps) {
             sb.setLength(0)
-            appendTemp(sb, "CPU ", snap.tCpu)
-            appendTemp(sb, " GPU ", snap.tGpu)
-            appendTemp(sb, " Bat ", snap.tBattery)
+            appendTemp(sb, "SoC ", snap.tSoc)
+            appendTemp(sb, "  Bat ", snap.tBattery)
             canvas.drawText(sb, 0, sb.length, x, y, textPaint)
         }
     }

@@ -24,8 +24,8 @@ Requires Android 10+. Tested on a Poco X8 Pro Max (Dimensity 9500s, HyperOS 3 / 
 | graph | Frame time of the last 120 frames; spikes are slow frames |
 | `CPU 50% 1.0\|0.6\|0.8 GHz` | CPU load and current speed of each core cluster (efficiency \| performance \| prime) |
 | `RAM 8.6/11.0G 79% App 1.30G` | System RAM used / usable, and RAM of the app in front |
-| `VRAM 4.5/12.0G 38%` | Virtual RAM in use (ZRAM + memory extension), optional |
-| `CPU 46° GPU 46° Bat 39°` | Temperatures from Android's thermal service |
+| `Swap 4.5/12.0G 38%` | Swap in use: ZRAM + "memory extension" / virtual RAM (optional; not GPU memory) |
+| `SoC 46°  Bat 39°` | Chip and battery temperature from Android's thermal service |
 
 Presets: **Minimal** (FPS number), **Standard** (FPS stats + graph), **Full** (+ CPU, RAM, temps).
 Tap **?** in the app for the same explanations on the phone.
@@ -48,6 +48,11 @@ Tap **?** in the app for the same explanations on the phone.
 MediaTek Dimensity 9000+ the GPU's own microcontroller manages frequency and
 the readable kernel events do not reflect it, and the real GPU sysfs nodes are
 blocked without root.
+
+**Temperatures:** without root, per-sensor thermal zones are blocked. Android's
+thermal service reports a single chip-wide value under the CPU/GPU/SoC labels
+on HyperOS (verified: identical readings), so the overlay shows it once as
+`SoC`. It is the temperature the phone uses for throttling.
 
 ## Build
 
