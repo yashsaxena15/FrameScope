@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+  <!-- Activity / pulse monitor icon -->
+  <path
+      android:fillColor="@android:color/transparent"
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="2"
+      android:pathData="M2,12 L6,12 L8,7 L11,17 L13,10 L15,14 L17,12 L22,12"/>
+</vector>

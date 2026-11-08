@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    This app reads only local sysfs/procfs nodes and writes files to
+    internal storage. No network traffic is made, so we lock down all
+    cleartext and rely on the system default trust anchors.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

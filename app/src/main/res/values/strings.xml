@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Performance Monitor Pro</string>
+    <string name="notif_channel_name">Performance Monitor</string>
+    <string name="notif_channel_desc">Persistent hardware monitoring service</string>
+    <string name="notif_content_title">Performance Monitor Pro</string>
+    <string name="notif_content_text">Monitoring active</string>
+    <string name="action_overlay">Overlay</string>
+    <string name="action_stop">Stop</string>
+    <string name="label_unavailable">Unavailable</string>
+</resources>
