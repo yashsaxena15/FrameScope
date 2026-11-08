@@ -84,7 +84,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private var nextGpuAt = 0L
     private var nextTempAt = 0L
     private var gpuStarted = false
-    private var lastSvc: IPrivService? = null
+    private var lastSvc: PrivApi? = null
 
     private var clusterPaths: Array<String>? = null
     private var cpuPaths: Array<String> = emptyArray()
@@ -157,6 +157,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             work.status = when (Priv.state()) {
                 Priv.State.NO_SHIZUKU -> "Shizuku not running"
                 Priv.State.NO_PERMISSION -> "Shizuku permission needed"
+                Priv.State.FAILED -> "Helper failed (see app)"
                 else -> "Connecting…"
             }
             work.fps = -1f
@@ -237,7 +238,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         }
     }
 
-    private fun resolveLayer(svc: IPrivService) {
+    private fun resolveLayer(svc: PrivApi) {
         val comp = component ?: return
         val list = svc.dump("SurfaceFlinger", arrayOf("--list")) ?: return
         val cands = LayerResolver.candidates(list, LayerResolver.packageOf(comp), comp)
@@ -260,16 +261,16 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         }
     }
 
-    private fun sampleCpu(svc: IPrivService) {
+    private fun sampleCpu(svc: PrivApi) {
         if (clusterPaths == null) {
             val base = "/sys/devices/system/cpu/cpufreq"
-            val policies = svc.listDir(base)?.filter { it.startsWith("policy") }
-                ?.sortedBy { it.removePrefix("policy").toIntOrNull() ?: 0 } ?: emptyList()
+            val policies = svc.listDir(base).filter { it.startsWith("policy") }
+                .sortedBy { it.removePrefix("policy").toIntOrNull() ?: 0 }
             val paths = policies.take(Snapshot.MAX_CLUSTERS).map { "$base/$it/scaling_cur_freq" }
             clusterPaths = paths.toTypedArray()
             cpuPaths = (paths + "/proc/stat").toTypedArray()
         }
-        val res = svc.readTexts(cpuPaths) ?: return
+        val res = svc.readTexts(cpuPaths)
         val nClusters = clusterPaths!!.size
         var k = 0
         for (i in 0 until nClusters) {
@@ -284,7 +285,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         }
     }
 
-    private fun sampleGpu(svc: IPrivService) {
+    private fun sampleGpu(svc: PrivApi) {
         if (!gpuStarted) {
             gpuStarted = true
             if (!svc.gpuStart()) {
@@ -292,7 +293,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
                 return
             }
         }
-        val r = svc.gpuSample() ?: return
+        val r = svc.gpuSample()
         work.gpuState = r[0].toInt()
         if (r[0] == -1L) {
             // Session gone (refused, or stopped by the probe screen): retry later.

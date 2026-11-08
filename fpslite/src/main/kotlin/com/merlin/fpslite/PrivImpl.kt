@@ -1,6 +1,5 @@
 package com.merlin.fpslite
 
-import android.content.Context
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import com.merlin.fpscore.GpuAggregator
@@ -13,29 +12,21 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
- * Shizuku UserService: lives in its own process with shell (or root) privileges.
- * Kept deliberately small: it only fetches raw data; all parsing of FPS data
+ * Runs inside the privileged helper process (see [PrivMain]) with shell (or root)
+ * privileges. Kept deliberately small: it only fetches raw data; FPS parsing
  * happens in the app process. GPU trace parsing happens here because the trace
  * file is only readable by the shell user.
  */
-class PrivService : IPrivService.Stub {
-
-    constructor() : super()
-
-    @Suppress("UNUSED_PARAMETER")
-    constructor(context: Context) : super()
+class PrivImpl : PrivApi {
 
     private val pool = Executors.newCachedThreadPool { r -> Thread(r, "priv-io").apply { isDaemon = true } }
     private val binders = ConcurrentHashMap<String, IBinder>()
 
     // ── lifecycle ────────────────────────────────────────────────────────────
 
-    override fun destroy() {
+    override fun exit() {
         try { gpuStop() } catch (_: Throwable) {}
-        System.exit(0)
     }
-
-    override fun exit() = destroy()
 
     override fun uid(): Int = android.os.Process.myUid()
 
@@ -54,8 +45,8 @@ class PrivService : IPrivService.Stub {
         return b
     }
 
-    override fun dump(service: String, args: Array<String>?): String? {
-        val a = args ?: emptyArray()
+    override fun dump(service: String, args: Array<String>): String? {
+        val a = args
         val b = binder(service) ?: return runDumpsys(service, a)
         val pipe = try { ParcelFileDescriptor.createPipe() } catch (_: Throwable) { return runDumpsys(service, a) }
         val reader = pool.submit(Callable {
@@ -86,9 +77,8 @@ class PrivService : IPrivService.Stub {
 
     override fun readText(path: String): String? = synchronized(files) { readLocked(path) }
 
-    override fun readTexts(paths: Array<String>?): Array<String?> = synchronized(files) {
-        val p = paths ?: return@synchronized emptyArray()
-        Array(p.size) { readLocked(p[it]) }
+    override fun readTexts(paths: Array<String>): Array<String?> = synchronized(files) {
+        Array(paths.size) { readLocked(paths[it]) }
     }
 
     private fun readLocked(path: String): String? {
@@ -226,7 +216,9 @@ class PrivService : IPrivService.Stub {
         }
     }
 
-    override fun gpuStop() = synchronized(gpuLock) { stopLocked() }
+    override fun gpuStop() {
+        synchronized(gpuLock) { stopLocked() }
+    }
 
     private fun stopLocked() {
         perfetto?.let {

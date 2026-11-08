@@ -1,8 +1,7 @@
-# Shizuku instantiates the UserService by class name inside a separate (shell-uid)
-# process, so its name and constructors must survive R8.
--keep class com.merlin.fpslite.PrivService { <init>(...); *; }
--keep class com.merlin.fpslite.IPrivService { *; }
--keep class com.merlin.fpslite.IPrivService$* { *; }
+# The privileged helper is started by class name via app_process.
+-keep class com.merlin.fpslite.PrivMain {
+    public static void main(java.lang.String[]);
+}
 
 -keep class rikka.shizuku.** { *; }
 -dontwarn rikka.shizuku.**

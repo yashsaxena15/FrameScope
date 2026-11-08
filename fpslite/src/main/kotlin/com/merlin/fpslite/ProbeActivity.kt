@@ -88,13 +88,14 @@ class ProbeActivity : Activity() {
 
         h("Backend")
         sb.append("state=").append(Priv.state()).append('\n')
+        Priv.lastError?.let { sb.append("lastError=").append(it).append('\n') }
         val svc = Priv.service ?: return sb.append("Privileged service not connected. Start Shizuku and grant permission.\n").toString()
         sb.append("service uid=").append(svc.uid()).append('\n')
         sb.append(svc.exec("getprop ro.mi.os.version.incremental; getprop ro.board.platform; getprop ro.hardware.vulkan; getenforce") ?: "")
 
         h("CPU")
         val base = "/sys/devices/system/cpu/cpufreq"
-        for (p in svc.listDir(base) ?: emptyArray()) {
+        for (p in svc.listDir(base)) {
             if (!p.startsWith("policy")) continue
             sb.append(p).append(": cpus=").append(svc.readText("$base/$p/related_cpus")?.trim() ?: "DENIED")
             sb.append(" cur=").append(svc.readText("$base/$p/scaling_cur_freq")?.trim() ?: "DENIED")

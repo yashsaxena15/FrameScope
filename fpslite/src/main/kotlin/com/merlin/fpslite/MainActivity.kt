@@ -62,6 +62,7 @@ class MainActivity : Activity() {
             Priv.State.CONNECTING -> "Shizuku: connecting…"
             Priv.State.NO_PERMISSION -> "Shizuku: permission needed"
             Priv.State.NO_SHIZUKU -> "Shizuku: not running — start it in the Shizuku app"
+            Priv.State.FAILED -> "Shizuku: helper failed — ${Priv.lastError ?: "unknown error"}"
         }
         shizukuButton.visibility = if (st == Priv.State.NO_PERMISSION) View.VISIBLE else View.GONE
         val canDraw = Settings.canDrawOverlays(this)
