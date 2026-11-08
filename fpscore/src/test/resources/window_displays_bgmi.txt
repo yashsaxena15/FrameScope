@@ -1,0 +1,337 @@
+WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
+  Display: mDisplayId=0 (organized)
+    init=1280x2772 520dpi mMinSizeOfResizeableTaskDp=200 cur=2772x1280 app=2772x1280 rng=1280x1280-2772x2772
+    deferred=false mLayoutNeeded=false
+  mLastOrientationSource=WindowedMagnification:0:31@229375594
+  deepestLastOrientationSource=ActivityRecord{131064702 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17674}
+  overrideConfig={1.0 405mcc863mnc [en_US] ldltr sw394dp w853dp h394dp 520dpi nrml long hdr widecg land night finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 2772, 1280) mAppBounds=Rect(0, 0 - 2772, 1280) mMaxBounds=Rect(0, 0 - 2772, 1280) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=ROTATION_90 mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} s.16304 fontWeightAdjustment=0/dc themeChanged=0 themeChangedFlags=0 display=0 extraData = Bundle[{}] screenType=0c}
+  ignoreOrientationRequest=false
+  mLayoutSeq=139884
+  mCurrentFocus=Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+  mFocusedApp=ActivityRecord{131064702 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17674}
+
+  mHoldScreenWindow=Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+  mObscuringWindow=null
+  mLastWakeLockHoldingWindow=Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+  mLastWakeLockObscuringWindow=null
+
+  displayId=0
+  mWallpaperTarget=null
+  mLastWallpaperZoomOut=1.0
+  token WallpaperWindowToken{b0f96fc showWhenLocked=false}:
+    mWallpaperX=0.5
+    mWallpaperY=0.5
+    mWallpaperXStep=NA
+    mWallpaperYStep=NA
+    mWallpaperDisplayOffsetX=NA
+    mWallpaperDisplayOffsetY=NA
+  token WallpaperWindowToken{d9f68a9 showWhenLocked=true}:
+    mWallpaperX=0.5
+    mWallpaperY=NA
+    mWallpaperXStep=NA
+    mWallpaperYStep=NA
+    mWallpaperDisplayOffsetX=NA
+    mWallpaperDisplayOffsetY=NA
+  mWallpaperZoomOutCallingInfo=
+{}
+  mWallpaperZoomOutWithPivotCallingInfo=
+{}
+  mWallpaperSurfacePosition=Point(0, 0)
+  mTmpMatrix=Matrix{[1.0, 0.0, 0.0][0.0, 1.0, 0.0][0.0, 0.0, 1.0]}
+
+  AppResurDevice:true
+  AppResurName:local
+  AppResurVer:0
+  AppResurEnable:true
+  AppResurCPU:High
+  AppResurLaunchThres:3000
+  AppResurMaxChildCount:3
+  AppResurInactiveDuraH:36
+  ReResurEnable:true
+
+  mSystemGestureExclusion=SkRegion()
+
+  Display areas in top down Z order:
+    * Leaf:37:37
+    * HideDisplayCutout:32:36
+      * OneHanded:34:36
+        * AppZoomOut:34:36
+          * Leaf:34:36
+      * AppZoomOut:33:33
+        * Leaf:33:33
+      * OneHanded:32:32
+        * AppZoomOut:32:32
+          * Leaf:32:32
+    * WindowedMagnification:0:31
+      * HideDisplayCutout:26:31
+        * OneHanded:26:31
+          * AppZoomOut:26:31
+            * Leaf:26:31
+      * Leaf:24:25
+      * HideDisplayCutout:18:23
+        * OneHanded:18:23
+          * AppZoomOut:23:23
+            * Leaf:23:23
+          * Leaf:22:22
+          * AppZoomOut:20:21
+            * Leaf:20:21
+          * Leaf:19:19
+          * AppZoomOut:18:18
+            * Leaf:18:18
+      * OneHanded:17:17
+        * Leaf:17:17
+      * HideDisplayCutout:16:16
+        * OneHanded:16:16
+          * AppZoomOut:16:16
+            * Leaf:16:16
+      * OneHanded:15:15
+        * Leaf:15:15
+      * HideDisplayCutout:0:14
+        * OneHanded:0:14
+          * AppZoomOut:2:14
+            * ImePlaceholder:13:14
+              * ImeContainer
+            * Leaf:3:12
+            * DefaultTaskDisplayArea (organized)
+          * Leaf:1:1
+          * AppZoomOut:0:0
+            * Leaf:0:0
+
+  Task display areas in top down Z order:
+    TaskDisplayArea DefaultTaskDisplayArea
+      overrideConfig={0.0 ?mcc0mnc ?localeList ?layoutDir ?swdp ?wdp ?hdp ?density ?lsize ?long ?ldr ?wideColorGamut ?orien ?uimode ?night ?touch ?keyb/?/? ?nav/? winConfig={ mBounds=Rect(0, 0 - 0, 0) mAppBounds=null mMaxBounds=Rect(0, 0 - 0, 0) mDisplayRotation=undefined mWindowingMode=fullscreen mActivityType=undefined mAlwaysOnTop=undefined mRotation=undefined mInSplitScreen=false letterBoxed=false foScaled=false isSpecificEmbedded=false embeddingScale=1.0} ?fontWeightAdjustment/0/0 themeChanged=0 themeChangedFlags=0 display=-1 extraData = Bundle[{}] screenType=-2/0}
+      mPreferredTopFocusableRootTask=Task{b4f8631 #17674 type=standard A=10316:com.pubg.imobile}
+      mLastFocusedRootTask=Task{b4f8631 #17674 type=standard A=10316:com.pubg.imobile}
+      Application tokens in top down Z order:
+      * Task{b4f8631 #17674 type=standard A=10316:com.pubg.imobile U=0 visible=true visibleRequested=true mode=fullscreen translucent=false sz=1}
+        bounds=[0,0][2772,1280]
+        * ActivityRecord{131064702 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17674}
+      * Task{45de547 #1 type=home U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+        bounds=[0,0][2772,1280]
+        * Task{2b4798a #2 type=home I=com.mi.android.globallauncher/com.miui.home.launcher.Launcher U=0 rootTaskId=1 visible=false visibleRequested=false mode=fullscreen translucent=true sz=1}
+          bounds=[0,0][2772,1280]
+          * ActivityRecord{245103611 u0 com.mi.android.globallauncher/com.miui.home.launcher.Launcher t2}
+        bounds=[0,0][2772,1280]
+      * Task{8563c0 #3 type=undefined U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=2}
+        bounds=[0,0][2772,1280]
+        * Task{c3e6eb4 #5 type=undefined U=0 rootTaskId=3 visible=false visibleRequested=false mode=multi-window translucent=true sz=0}
+          bounds=[0,2772][1280,4158]
+        * Task{528dc84 #4 type=undefined U=0 rootTaskId=3 visible=false visibleRequested=false mode=multi-window translucent=true sz=0}
+          bounds=[0,0][2772,1280]
+      * Task{6c674ac #6 type=undefined U=0 visible=false visibleRequested=false mode=fullscreen translucent=true sz=2}
+        bounds=[0,0][2772,1280]
+        * Task{dd6ad6c #8 type=undefined U=0 rootTaskId=6 visible=false visibleRequested=false mode=multi-window translucent=true sz=0}
+          bounds=[0,2772][1280,4158]
+        * Task{a31b90c #7 type=undefined U=0 rootTaskId=6 visible=false visibleRequested=false mode=multi-window translucent=true sz=0}
+          bounds=[0,0][2772,1280]
+
+  rootHomeTask=Task=1
+
+  PinnedTaskController
+    mIsImeShowing=false
+    mImeHeight=0
+    mMinAspectRatio=0.41841003
+    mMaxAspectRatio=2.39
+
+  DisplayFrames w=2772 h=1280 r=1
+
+  DisplayPolicy
+    mCarDockEnablesAccelerometer=true mDeskDockEnablesAccelerometer=true
+    mDockMode=EXTRA_DOCK_STATE_UNDOCKED mLidState=LID_ABSENT
+    mAwake=true mScreenOnEarly=true mScreenOnFully=true
+    mKeyguardDrawComplete=true mWindowManagerDrawComplete=true
+    mHdmiPlugged=false
+    mLastBehavior=SHOW_TRANSIENT_BARS_BY_SWIPE
+    mShowingDream=false mDreamingLockscreen=false
+    mStatusBar=[Lcom.android.server.wm.WindowState;@ccac3b8
+    mExpandedPanel=Window{7e2429e u0 NotificationShade}
+    isKeyguardShowing=false
+    mNavigationBar=Window{50826b7 u0 NavigationBar0}
+    mNavBarOpacityMode=2
+    mNavigationBarCanMove=false
+    mHasBottomNavigationBar=true
+    mTopGestureHost=Window{c504417 u0 StatusBar}
+    mBottomGestureHost=Window{50826b7 u0 NavigationBar0}
+    mFocusedWindow=Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+    mTopFullscreenOpaqueWindowState=Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+    mSystemBarColorApps={ActivityRecord{131064702 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17674}}
+    mLastStatusBarAppearanceRegions=
+      AppearanceRegion{ bounds=[0,0][2772,1280]}
+    mLastLetterboxDetails=
+    mStatusBarBackgroundWindows=
+      Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+    mTopIsFullscreen=true
+    mImeInsetsConsumed=false
+    mForceShowNavigationBarEnabled=false mAllowLockscreenWhenOn=false
+    mRemoteInsetsControllerControlsSystemBars=false
+    mDecorInsetsInfo:
+      ROTATION_0={nonDecorInsets=[0,0][0,0], overrideNonDecorInsets=[0,152][0,52], configInsets=[0,0][0,0], overrideConfigInsets=[0,152][0,52], nonDecorFrame=[0,0][1280,2772], overrideNonDecorFrame=[0,152][1280,2720], configFrame=[0,0][1280,2772], overrideConfigFrame=[0,152][1280,2720]}
+      ROTATION_90={nonDecorInsets=[0,0][0,0], overrideNonDecorInsets=[152,0][0,52], configInsets=[0,0][0,0], overrideConfigInsets=[152,0][0,52], nonDecorFrame=[0,0][2772,1280], overrideNonDecorFrame=[152,0][2772,1228], configFrame=[0,0][2772,1280], overrideConfigFrame=[152,0][2772,1228]}
+      ROTATION_180={nonDecorInsets=[0,0][0,0], overrideNonDecorInsets=[0,0][0,204], configInsets=[0,0][0,0], overrideConfigInsets=[0,0][0,204], nonDecorFrame=[0,0][1280,2772], overrideNonDecorFrame=[0,0][1280,2568], configFrame=[0,0][1280,2772], overrideConfigFrame=[0,0][1280,2568]}
+      ROTATION_270={nonDecorInsets=[0,0][0,0], overrideNonDecorInsets=[0,0][152,52], configInsets=[0,0][0,0], overrideConfigInsets=[0,0][152,52], nonDecorFrame=[0,0][2772,1280], overrideNonDecorFrame=[0,0][2620,1228], configFrame=[0,0][2772,1280], overrideConfigFrame=[0,0][2620,1228]}
+    SystemGestures:
+      mDisplayCutoutTouchableRegionSize=39
+      mSwipeStartThreshold=Rect(191, 78 - 78, 78)
+      mSwipeDistanceThreshold=78
+    mDisplayContent=Display{#0 state=ON size=2772x1280 ROTATION_90}
+
+  DisplayRotation
+    mCurrentAppOrientation=SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    mLastOrientation=6
+    mRotation=1 mDeferredRotationPauseCount=0
+    mLandscapeRotation=ROTATION_90 mSeascapeRotation=ROTATION_270
+    mPortraitRotation=ROTATION_0 mUpsideDownRotation=ROTATION_180
+    mSupportAutoRotation=true
+    WindowOrientationListener
+      mEnabled=true
+      mCurrentRotation=ROTATION_90
+      mSensorType=null
+      mSensor={Sensor name="dev_orient", vendor="mtk", version=1, type=27, maxRange=3.0, resolution=1.0, power=0.001, minDelay=0}
+      mRate=2
+      OrientationSensorJudge
+        mDesiredRotation=ROTATION_90
+        mProposedRotation=ROTATION_90
+        mTouching=true
+        mTouchEndedTimestampNanos=358161227669459
+        mLastRotationResolution=1
+
+    mCarDockRotation=-1 mDeskDockRotation=-1
+    mUserRotationMode=USER_ROTATION_LOCKED mUserRotation=ROTATION_0
+    mUserRotationModeOuter=USER_ROTATION_LOCKED mUserRotationOuter=ROTATION_0
+    mUserRotationModeInner=USER_ROTATION_FREE mUserRotationInner=ROTATION_0
+    mCameraRotationMode=0 mAllowAllRotations=false
+    mDemoHdmiRotation=ROTATION_90 mDemoHdmiRotationLock=false mUndockedHdmiRotation=-1
+    mLidOpenRotation=-1
+    mFixedToUserRotation=false
+
+    RotationHistory
+      11-08 17:07:07.704 ROTATION_270 to ROTATION_90
+        source=ActivityRecord{100019014 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17665} SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        mode=USER_ROTATION_LOCKED user=ROTATION_0 sensor=ROTATION_90
+      11-08 17:07:14.724 ROTATION_90 to ROTATION_270
+        source=ActivityRecord{100019014 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17665} SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        mode=USER_ROTATION_LOCKED user=ROTATION_0 sensor=ROTATION_270
+      11-08 17:07:16.788 ROTATION_270 to ROTATION_0
+        source=ActivityRecord{245103611 u0 com.mi.android.globallauncher/com.miui.home.launcher.Launcher t2} SCREEN_ORIENTATION_PORTRAIT
+        mode=USER_ROTATION_LOCKED user=ROTATION_0 sensor=ROTATION_0
+      11-08 17:13:19.394 ROTATION_0 to ROTATION_90
+        source=ActivityRecord{100019014 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17665} SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        mode=USER_ROTATION_LOCKED user=ROTATION_0 sensor=ROTATION_0
+      11-08 17:14:36.283 ROTATION_90 to ROTATION_270
+        source=ActivityRecord{100019014 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17665} SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        mode=USER_ROTATION_LOCKED user=ROTATION_0 sensor=ROTATION_270
+      11-08 17:14:37.595 ROTATION_270 to ROTATION_90
+        source=ActivityRecord{100019014 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17665} SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        mode=USER_ROTATION_LOCKED user=ROTATION_0 sensor=ROTATION_90
+      11-08 17:14:56.310 ROTATION_90 to ROTATION_0
+        source=ActivityRecord{245103611 u0 com.mi.android.globallauncher/com.miui.home.launcher.Launcher t2} SCREEN_ORIENTATION_PORTRAIT
+        mode=USER_ROTATION_LOCKED user=ROTATION_0 sensor=ROTATION_0
+      11-08 17:51:27.815 ROTATION_0 to ROTATION_90
+        source=ActivityRecord{131064702 u0 com.pubg.imobile/com.epicgames.ue4.GameActivity t17674} SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        mode=USER_ROTATION_LOCKED user=ROTATION_0 sensor=ROTATION_0
+
+        MiuiRotationLockHistory
+          11-05 12:59:19.863: mode=USER_ROTATION_FREE, rotation=ROTATION_0, caller=ControlCenter#Inner
+          11-05 13:10:52.341: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=ControlCenter#Inner
+
+        RotationLockHistory
+          11-07 22:32:00.491: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=RotationButtonController#onRotationWatcherChanged
+          11-07 22:32:00.525: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=RotationButtonController#onRotationWatcherChanged
+          11-08 13:07:15.159: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=RotationButtonController#onRotationWatcherChanged
+          11-08 13:07:15.171: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=RotationButtonController#onRotationWatcherChanged
+          11-08 17:07:16.871: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=RotationButtonController#onRotationWatcherChanged
+          11-08 17:07:17.235: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=RotationButtonController#onRotationWatcherChanged
+          11-08 17:14:56.416: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=RotationButtonController#onRotationWatcherChanged
+          11-08 17:14:56.430: mode=USER_ROTATION_LOCKED, rotation=ROTATION_0, caller=RotationButtonController#onRotationWatcherChanged
+
+  InputConsumers:
+    name=recents_animation_input_consumer pid=2702 user=UserHandle{0}
+
+  WindowInsetsStateController
+    InsetsState
+      mDisplayFrame=Rect(0, 0 - 2772, 1280)
+      mDisplayCutout=DisplayCutout{insets=Rect(152, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 607 - 152, 673), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1280 displayHeight=2772 physicalDisplayWidth=1280 physicalDisplayHeight=2772 density={3.25} cutoutSpec={M 0,0 H -33 V 152 H 33 V 0 H 0 Z} rotation={1} scale={1.0} physicalPixelDisplaySizeRatio={1.0}}} sideOverrides={}}
+      mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=156, center=Point(156, 156)}, RoundedCorner{position=TopRight, radius=156, center=Point(2616, 156)}, RoundedCorner{position=BottomRight, radius=156, center=Point(2616, 1124)}, RoundedCorner{position=BottomLeft, radius=156, center=Point(156, 1124)}]}
+      mRoundedCornerFrame=Rect(0, 0 - 0, 0)
+      mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(131, 0 - 173, 152) rotation=1}
+      mDisplayShape=DisplayShape{ spec=1406003047 displayWidth=1280 displayHeight=2772 physicalPixelDisplaySizeRatio=1.0 rotation=1 offsetX=0 offsetY=0 scale=1.0}
+        InsetsSource id=cdd50001 type=navigationBars frame=[0,1228][2772,1280] visible=false flags=SUPPRESS_SCRIM sideHint=BOTTOM boundingRects=null
+        InsetsSource id=cdd50004 type=systemGestures frame=[0,0][0,0] visible=true flags= sideHint=NONE boundingRects=null
+        InsetsSource id=cdd50005 type=mandatorySystemGestures frame=[0,1124][2772,1280] visible=true flags= sideHint=BOTTOM boundingRects=null
+        InsetsSource id=cdd50006 type=tappableElement frame=[0,0][0,0] visible=true flags= sideHint=NONE boundingRects=null
+        InsetsSource id=cdd50024 type=systemGestures frame=[0,0][0,0] visible=true flags= sideHint=NONE boundingRects=null
+        InsetsSource id=f0360000 type=statusBars frame=[0,0][2772,152] visible=false flags= sideHint=TOP boundingRects=null
+        InsetsSource id=f0360005 type=mandatorySystemGestures frame=[0,0][2772,152] visible=true flags= sideHint=TOP boundingRects=null
+        InsetsSource id=f0360006 type=tappableElement frame=[0,0][2772,152] visible=true flags= sideHint=TOP boundingRects=null
+        InsetsSource id=3 type=ime frame=[0,0][0,0] visible=false flags= sideHint=NONE boundingRects=null
+        InsetsSource id=7 type=displayCutout frame=[0,0][152,1280] visible=true flags= sideHint=LEFT boundingRects=null
+    Control map:
+      Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}:
+        InsetsSourceControl: {cdd50001 mType=navigationBars initiallyVisible mSurfacePosition=Point(0, 1124) mInsetsHint=Insets{left=0, top=0, right=0, bottom=52}}
+        InsetsSourceControl: {f0360000 mType=statusBars initiallyVisible mSurfacePosition=Point(0, 0) mInsetsHint=Insets{left=0, top=152, right=0, bottom=0}}
+        InsetsSourceControl: {3 mType=ime mSurfacePosition=Point(0, 152) mInsetsHint=Insets{left=0, top=0, right=0, bottom=985}}
+    InsetsSourceProviders:
+      ImeInsetsSourceProvider
+        mSource=InsetsSource id=3 type=ime frame=[0,0][0,0] visible=false flags= sideHint=NONE boundingRects=null
+        mSourceFrame=Rect(0, 2616 - 1280, 2772)
+        mControl=InsetsSourceControl mId=3 mType=ime mLeash=Surface(name=Surface(name=a074c7f InputMethod#68696)/@0xb3cdc95 - animation-leash of insets_animation#100239)/@0x6e1d12a mInitiallyVisible=false mSurfacePosition=Point(0, 152) mInsetsHint=Insets{left=0, top=0, right=0, bottom=985} mSkipAnimationOnce=false mImeStatsToken=null
+        mInsetsHint=Insets{left=0, top=0, right=0, bottom=985} stale
+        mIsLeashInitialized=true mHasPendingPosition=false
+        mWindowContainer=Window{a074c7f u0 InputMethod}
+        mAdapter=ControlAdapter mCapturedLeash=Surface(name=Surface(name=a074c7f InputMethod#68696)/@0xb3cdc95 - animation-leash of insets_animation#100239)/@0x6e1d12a
+        mControlTarget=Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+        mImeShowing=false mLastDrawn=false        showImePostLayout not scheduled, mImeRequester=null
+
+      InsetsSourceProvider
+        mSource=InsetsSource id=f0360006 type=tappableElement frame=[0,0][2772,152] visible=true flags= sideHint=TOP boundingRects=null
+        mSourceFrame=Rect(0, 0 - 2772, 152)
+        mIsLeashInitialized=false mHasPendingPosition=false
+        mWindowContainer=Window{c504417 u0 StatusBar}
+      InsetsSourceProvider
+        mSource=InsetsSource id=f0360005 type=mandatorySystemGestures frame=[0,0][2772,152] visible=true flags= sideHint=TOP boundingRects=null
+        mSourceFrame=Rect(0, 0 - 2772, 152)
+        mIsLeashInitialized=false mHasPendingPosition=false
+        mWindowContainer=Window{c504417 u0 StatusBar}
+      InsetsSourceProvider
+        mSource=InsetsSource id=f0360000 type=statusBars frame=[0,0][2772,152] visible=false flags= sideHint=TOP boundingRects=null
+        mSourceFrame=Rect(0, 0 - 2772, 152)
+        mControl=InsetsSourceControl mId=f0360000 mType=statusBars mLeash=Surface(name=Surface(name=c504417 StatusBar#111)/@0xe4bd9ed - animation-leash of insets_animation#100249)/@0x7ff959e mInitiallyVisible=true mSurfacePosition=Point(0, 0) mInsetsHint=Insets{left=0, top=152, right=0, bottom=0} mSkipAnimationOnce=false mImeStatsToken=null
+        mInsetsHint=Insets{left=0, top=152, right=0, bottom=0}
+        mIsLeashInitialized=true mHasPendingPosition=false
+        mWindowContainer=Window{c504417 u0 StatusBar}
+        mAdapter=ControlAdapter mCapturedLeash=Surface(name=Surface(name=c504417 StatusBar#111)/@0xe4bd9ed - animation-leash of insets_animation#100249)/@0x7ff959e
+        mControlTarget=Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+      InsetsSourceProvider
+        mSource=InsetsSource id=cdd50024 type=systemGestures frame=[0,0][0,0] visible=true flags= sideHint=NONE boundingRects=null
+        mSourceFrame=Rect(0, 0 - 0, 0)
+        mIsLeashInitialized=false mHasPendingPosition=false
+        mWindowContainer=Window{50826b7 u0 NavigationBar0}
+      InsetsSourceProvider
+        mSource=InsetsSource id=cdd50006 type=tappableElement frame=[0,0][0,0] visible=true flags= sideHint=NONE boundingRects=null
+        mSourceFrame=Rect(0, 0 - 0, 0)
+        mIsLeashInitialized=false mHasPendingPosition=false
+        mWindowContainer=Window{50826b7 u0 NavigationBar0}
+      InsetsSourceProvider
+        mSource=InsetsSource id=cdd50005 type=mandatorySystemGestures frame=[0,1124][2772,1280] visible=true flags= sideHint=BOTTOM boundingRects=null
+        mSourceFrame=Rect(0, 1124 - 2772, 1280)
+        mIsLeashInitialized=false mHasPendingPosition=false
+        mWindowContainer=Window{50826b7 u0 NavigationBar0}
+      InsetsSourceProvider
+        mSource=InsetsSource id=cdd50004 type=systemGestures frame=[0,0][0,0] visible=true flags= sideHint=NONE boundingRects=null
+        mSourceFrame=Rect(0, 0 - 0, 0)
+        mIsLeashInitialized=false mHasPendingPosition=false
+        mWindowContainer=Window{50826b7 u0 NavigationBar0}
+      InsetsSourceProvider
+        mSource=InsetsSource id=cdd50001 type=navigationBars frame=[0,1228][2772,1280] visible=false flags=SUPPRESS_SCRIM sideHint=BOTTOM boundingRects=null
+        mSourceFrame=Rect(0, 1228 - 2772, 1280)
+        mControl=InsetsSourceControl mId=cdd50001 mType=navigationBars mLeash=Surface(name=Surface(name=50826b7 NavigationBar0#109)/@0x94c0d8d - animation-leash of insets_animation#100250)/@0x5ad804c mInitiallyVisible=true mSurfacePosition=Point(0, 1124) mInsetsHint=Insets{left=0, top=0, right=0, bottom=52} mSkipAnimationOnce=false mImeStatsToken=null
+        mInsetsHint=Insets{left=0, top=0, right=0, bottom=52}
+        mIsLeashInitialized=true mHasPendingPosition=false
+        mWindowContainer=Window{50826b7 u0 NavigationBar0}
+        mAdapter=ControlAdapter mCapturedLeash=Surface(name=Surface(name=50826b7 NavigationBar0#109)/@0x94c0d8d - animation-leash of insets_animation#100250)/@0x5ad804c
+        mControlTarget=Window{ffe995e u0 com.pubg.imobile/com.epicgames.ue4.GameActivity}
+  InsetsPolicy
+    status: WINDOW_STATE_HIDDEN
+    nav: WINDOW_STATE_HIDDEN
+
+  mInputMethodWindow=Window{a074c7f u0 InputMethod}
