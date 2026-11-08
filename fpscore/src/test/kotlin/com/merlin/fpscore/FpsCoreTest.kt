@@ -216,4 +216,28 @@ class FpsCoreTest {
         assertEquals(1687512L, MemInfo.processRssKb(status))
         assertEquals(-1L, MemInfo.processRssKb("Name:\tx\n"))
     }
+
+    @Test fun resetSessionClearsJankAndLowsButKeepsFps() {
+        val t = FrameTracker()
+        t.vsyncPeriodNs = 8_333_333L
+        // 300 frames at 60 FPS with a 100 ms hitch at frame 150.
+        val list = ArrayList<Long>()
+        var ts = 1_000_000_000L
+        for (i in 0 until 300) { ts += if (i == 150) 100_000_000L else 16_666_667L; list.add(ts) }
+        val a = list.toLongArray()
+        t.add(a, a.size)
+        val s = FpsStats()
+        t.computeStats(a.last(), 10_000_000_000L, s)
+        assertEquals(1, s.jank)
+        assertTrue("1% low=${s.low1Fps}", s.low1Fps < 30f) // worst 3 of 299 frames: (100+16.7+16.7)/3 ms ≈ 22 FPS
+
+        t.resetSession()
+        val b = LongArray(120) { a.last() + (it + 1) * 16_666_667L }
+        t.add(b, b.size)
+        t.computeStats(b.last(), 10_000_000_000L, s)
+        assertEquals(0, s.jank)
+        assertEquals(119, s.frames) // only intervals after the reset
+        assertEquals(60f, s.low1Fps, 0.5f)
+        assertEquals(60f, t.currentFps(b.last() + 1_000_000L, 1_000_000_000L), 0.5f)
+    }
 }

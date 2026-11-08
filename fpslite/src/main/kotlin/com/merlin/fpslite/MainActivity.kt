@@ -81,11 +81,22 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(24), dp(20), dp(24))
         }
-        root.addView(TextView(this).apply {
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(TextView(this).apply {
             text = "FPS Lite"
             textSize = 26f
             typeface = Typeface.DEFAULT_BOLD
-        })
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        header.addView(Button(this).apply {
+            text = "?"
+            textSize = 18f
+            contentDescription = "Help: what each overlay value means"
+            setOnClickListener { startActivity(Intent(this@MainActivity, HelpActivity::class.java)) }
+        }, LinearLayout.LayoutParams(dp(56), dp(56)))
+        root.addView(header)
         root.addView(TextView(this).apply {
             text = "Lightweight FPS / CPU / GPU overlay via Shizuku"
             alpha = 0.7f
@@ -143,9 +154,10 @@ class MainActivity : Activity() {
 
         section(root, "Full preset metrics")
         check(root, "CPU load", prefs.showCpuLoad) { prefs.showCpuLoad = it }
-        check(root, "CPU frequency per cluster", prefs.showCpuFreq) { prefs.showCpuFreq = it }
+        check(root, "CPU frequency per core cluster", prefs.showCpuFreq) { prefs.showCpuFreq = it }
+        hint(root, "Shown as efficiency | performance | prime cores, in GHz (e.g. 1.0|0.6|0.8 GHz)")
         check(root, "RAM usage (system + current app)", prefs.showRam) { prefs.showRam = it }
-        check(root, "Also show swap / memory extension", prefs.showSwap) { prefs.showSwap = it }
+        check(root, "Virtual RAM (swap + memory extension)", prefs.showSwap) { prefs.showSwap = it }
         check(root, "GPU load + frequency (experimental — not accurate on MediaTek)", prefs.showGpu) { prefs.showGpu = it }
         check(root, "Temperatures (CPU / GPU / battery)", prefs.showTemps) { prefs.showTemps = it }
 
@@ -155,6 +167,7 @@ class MainActivity : Activity() {
         slider(root, "FPS poll interval", 100, 500, prefs.pollMs, { "$it ms" }) { prefs.pollMs = it }
         slider(root, "Current-FPS window", 250, 2000, prefs.fpsWindowMs, { "$it ms" }) { prefs.fpsWindowMs = it }
         check(root, "Lock position (touches pass through to the game)", prefs.locked) { prefs.locked = it }
+        hint(root, "Double-tap the overlay (or use \"Reset stats\" in the notification) to reset jank and lows")
 
         section(root, "Diagnostics")
         root.addView(Button(this).apply {
@@ -183,6 +196,15 @@ class MainActivity : Activity() {
             textSize = 15f
             typeface = Typeface.DEFAULT_BOLD
             setPadding(0, dp(20), 0, dp(6))
+        })
+    }
+
+    private fun hint(root: LinearLayout, text: String) {
+        root.addView(TextView(this).apply {
+            this.text = text
+            textSize = 12f
+            alpha = 0.6f
+            setPadding(dp(32), 0, 0, dp(4))
         })
     }
 

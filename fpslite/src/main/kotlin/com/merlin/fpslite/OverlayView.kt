@@ -102,6 +102,12 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
                 if (preset == Prefs.PRESET_FULL && showRam) {
                     widest = maxOf(widest, textPaint.measureText("RAM 10.8/11.0G 98% App 1.65G"))
                 }
+                if (preset == Prefs.PRESET_FULL && (showCpuLoad || showCpuFreq)) {
+                    widest = maxOf(widest, textPaint.measureText("CPU 100% 2.4|3.3|3.7 GHz"))
+                }
+                if (preset == Prefs.PRESET_FULL && showTemps) {
+                    widest = maxOf(widest, textPaint.measureText("CPU 100° GPU 100° Bat 45°"))
+                }
                 widthPx = (widest + 2 * pad).toInt()
                 heightPx = (bigH + 2 * lineH + graphH + extraLines * lineH + 3 * pad).toInt()
             }
@@ -175,10 +181,10 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
             }
             if (showCpuFreq) {
                 for (i in 0 until snap.clusters) {
-                    if (i > 0) sb.append('/')
+                    if (i > 0) sb.append('|')
                     appendFixed(sb, snap.clusterMHz[i] / 1000f, 1)
                 }
-                if (snap.clusters > 0) sb.append("G")
+                if (snap.clusters > 0) sb.append(" GHz")
             }
             canvas.drawText(sb, 0, sb.length, x, y, textPaint)
             y += lineH
@@ -201,10 +207,11 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
             y += lineH
             if (showSwap) {
                 sb.setLength(0)
-                sb.append("Swap ")
+                sb.append("VRAM ")
                 if (snap.swapTotalMB > 0 && snap.swapUsedMB >= 0) {
                     appendFixed(sb, snap.swapUsedMB / 1024f, 1); sb.append('/')
-                    appendFixed(sb, snap.swapTotalMB / 1024f, 1); sb.append('G')
+                    appendFixed(sb, snap.swapTotalMB / 1024f, 1); sb.append("G ")
+                    appendFixed(sb, snap.swapUsedMB * 100f / snap.swapTotalMB, 0); sb.append('%')
                 } else {
                     sb.append("none")
                 }
@@ -228,9 +235,9 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         }
         if (showTemps) {
             sb.setLength(0)
-            appendTemp(sb, "C ", snap.tCpu)
-            appendTemp(sb, " G ", snap.tGpu)
-            appendTemp(sb, " B ", snap.tBattery)
+            appendTemp(sb, "CPU ", snap.tCpu)
+            appendTemp(sb, " GPU ", snap.tGpu)
+            appendTemp(sb, " Bat ", snap.tBattery)
             canvas.drawText(sb, 0, sb.length, x, y, textPaint)
         }
     }

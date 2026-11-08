@@ -37,6 +37,9 @@ class FrameTracker(capacity: Int = 4096) {
     /** Vsync period used for jank thresholds; update from the --latency header. */
     var vsyncPeriodNs: Long = 16_666_667L
 
+    /** Frames at or before this timestamp are excluded from stats (set by [resetSession]). */
+    private var statsFromNs = 0L
+
     private var prev1 = 0f
     private var prev2 = 0f
     private var prev3 = 0f
@@ -49,6 +52,21 @@ class FrameTracker(capacity: Int = 4096) {
         sessionFrames = 0
         sessionJank = 0
         sessionBigJank = 0
+        statsFromNs = 0L
+        prev1 = 0f; prev2 = 0f; prev3 = 0f
+    }
+
+    /**
+     * Starts a fresh measurement (e.g. at the start of a match) without losing
+     * the frame history: jank counters and avg / 1% / 0.1% lows only consider
+     * frames presented after this call. Current FPS and the graph are unaffected.
+     */
+    fun resetSession() {
+        sessionFrames = 0
+        sessionJank = 0
+        sessionBigJank = 0
+        gapCount = 0
+        statsFromNs = lastTimestamp
         prev1 = 0f; prev2 = 0f; prev3 = 0f
     }
 
@@ -144,7 +162,7 @@ class FrameTracker(capacity: Int = 4096) {
     fun computeStats(nowNs: Long, windowNs: Long, out: FpsStats) {
         out.clear()
         if (size < 2) return
-        val from = nowNs - windowNs
+        val from = maxOf(nowNs - windowNs, statsFromNs)
         var n = 0
         var sumMs = 0.0
         var maxMs = 0f

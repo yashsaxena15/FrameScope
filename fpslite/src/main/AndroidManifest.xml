@@ -29,6 +29,11 @@
             android:label="Device probe" />
 
         <activity
+            android:name=".HelpActivity"
+            android:exported="false"
+            android:label="What the numbers mean" />
+
+        <activity
             android:name=".StartActivity"
             android:excludeFromRecents="true"
             android:exported="false"

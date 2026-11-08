@@ -137,6 +137,11 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         handler.post(tick)
     }
 
+    /** Resets jank counters and avg / 1% / 0.1% lows (double-tap on the overlay). */
+    fun resetStats() {
+        if (::handler.isInitialized) handler.post { tracker.resetSession() }
+    }
+
     /** Pause polling (screen off). Keeps state so resuming is instant. */
     fun pause() {
         running = false

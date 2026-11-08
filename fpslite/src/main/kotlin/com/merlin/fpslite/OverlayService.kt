@@ -88,6 +88,7 @@ class OverlayService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> stopSelf()
+            ACTION_RESET -> sampler?.resetStats()
             ACTION_REFRESH -> {
                 sampler?.applyPrefs()
                 view?.applyPrefs()
@@ -129,24 +130,50 @@ class OverlayService : Service() {
         var downY = 0f
         var startX = 0
         var startY = 0
+        var moved = false
+        var lastTapAt = 0L
+        val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+        val doubleTapMs = android.view.ViewConfiguration.getDoubleTapTimeout().toLong()
         v.setOnTouchListener { _, e ->
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = e.rawX; downY = e.rawY
                     startX = params.x; startY = params.y
+                    moved = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = startX + (e.rawX - downX).toInt()
-                    params.y = startY + (e.rawY - downY).toInt()
-                    wm.updateViewLayout(v, params)
+                    val dx = e.rawX - downX
+                    val dy = e.rawY - downY
+                    if (!moved && (Math.abs(dx) > slop || Math.abs(dy) > slop)) moved = true
+                    if (moved) {
+                        params.x = startX + dx.toInt()
+                        params.y = startY + dy.toInt()
+                        wm.updateViewLayout(v, params)
+                    }
                     true
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    prefs.x = params.x
-                    prefs.y = params.y
+                MotionEvent.ACTION_UP -> {
+                    if (moved) {
+                        prefs.x = params.x
+                        prefs.y = params.y
+                    } else {
+                        // Double-tap: reset jank and avg / 1% / 0.1% lows (e.g. at match start).
+                        val now = e.eventTime
+                        if (now - lastTapAt <= doubleTapMs) {
+                            sampler?.resetStats()
+                            v.performHapticFeedback(
+                                if (Build.VERSION.SDK_INT >= 30) android.view.HapticFeedbackConstants.CONFIRM
+                                else android.view.HapticFeedbackConstants.VIRTUAL_KEY
+                            )
+                            lastTapAt = 0L
+                        } else {
+                            lastTapAt = now
+                        }
+                    }
                     true
                 }
+                MotionEvent.ACTION_CANCEL -> true
                 else -> false
             }
         }
@@ -167,11 +194,17 @@ class OverlayService : Service() {
             this, 2, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+        val reset = PendingIntent.getService(
+            this, 3, Intent(this, OverlayService::class.java).setAction(ACTION_RESET),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_fps)
             .setContentTitle("FPS Lite overlay running")
+            .setContentText("Double-tap the overlay to reset stats")
             .setContentIntent(open)
             .setOngoing(true)
+            .addAction(Notification.Action.Builder(null, "Reset stats", reset).build())
             .addAction(Notification.Action.Builder(null, "Stop", stop).build())
             .build()
         if (Build.VERSION.SDK_INT >= 34) {
@@ -192,6 +225,7 @@ class OverlayService : Service() {
         private const val NOTIF_ID = 1
         const val ACTION_STOP = "com.merlin.fpslite.STOP"
         const val ACTION_REFRESH = "com.merlin.fpslite.REFRESH"
+        const val ACTION_RESET = "com.merlin.fpslite.RESET"
 
         @Volatile
         var running = false
