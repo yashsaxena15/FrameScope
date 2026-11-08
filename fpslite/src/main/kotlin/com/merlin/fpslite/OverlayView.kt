@@ -57,6 +57,8 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
     private var showCpuFreq = true
     private var showGpu = true
     private var showTemps = true
+    private var showRam = true
+    private var showSwap = false
 
     init {
         applyPrefs()
@@ -69,6 +71,8 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         showCpuFreq = prefs.showCpuFreq
         showGpu = prefs.showGpu
         showTemps = prefs.showTemps
+        showRam = prefs.showRam
+        showSwap = prefs.showSwap
         bgPaint.color = Color.argb(prefs.bgAlpha.coerceIn(0, 255), 0, 0, 0)
         pad = 6 * density * s
         bigPaint.textSize = (if (preset == Prefs.PRESET_MINIMAL) 20 else 22) * density * s
@@ -83,6 +87,8 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         extraLines = 0
         if (preset == Prefs.PRESET_FULL) {
             if (showCpuLoad || showCpuFreq) extraLines++
+            if (showRam) extraLines++
+            if (showRam && showSwap) extraLines++
             if (showGpu) extraLines++
             if (showTemps) extraLines++
         }
@@ -92,7 +98,11 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
                 heightPx = (bigH + 2 * pad).toInt()
             }
             else -> {
-                widthPx = (textPaint.measureText("avg 000 1% 000 .1% 000") + 2 * pad).toInt()
+                var widest = textPaint.measureText("avg 000 1% 000 .1% 000")
+                if (preset == Prefs.PRESET_FULL && showRam) {
+                    widest = maxOf(widest, textPaint.measureText("RAM 10.8/11.0G 98% App 1.65G"))
+                }
+                widthPx = (widest + 2 * pad).toInt()
                 heightPx = (bigH + 2 * lineH + graphH + extraLines * lineH + 3 * pad).toInt()
             }
         }
@@ -173,9 +183,38 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
             canvas.drawText(sb, 0, sb.length, x, y, textPaint)
             y += lineH
         }
+        if (showRam) {
+            sb.setLength(0)
+            sb.append("RAM ")
+            if (snap.ramTotalMB > 0 && snap.ramUsedMB >= 0) {
+                appendFixed(sb, snap.ramUsedMB / 1024f, 1); sb.append('/')
+                appendFixed(sb, snap.ramTotalMB / 1024f, 1); sb.append("G ")
+                appendFixed(sb, snap.ramUsedMB * 100f / snap.ramTotalMB, 0); sb.append('%')
+            } else {
+                sb.append("--")
+            }
+            if (snap.appRamMB >= 0) {
+                sb.append(" App ")
+                appendFixed(sb, snap.appRamMB / 1024f, 2); sb.append('G')
+            }
+            canvas.drawText(sb, 0, sb.length, x, y, textPaint)
+            y += lineH
+            if (showSwap) {
+                sb.setLength(0)
+                sb.append("Swap ")
+                if (snap.swapTotalMB > 0 && snap.swapUsedMB >= 0) {
+                    appendFixed(sb, snap.swapUsedMB / 1024f, 1); sb.append('/')
+                    appendFixed(sb, snap.swapTotalMB / 1024f, 1); sb.append('G')
+                } else {
+                    sb.append("none")
+                }
+                canvas.drawText(sb, 0, sb.length, x, y, textPaint)
+                y += lineH
+            }
+        }
         if (showGpu) {
             sb.setLength(0)
-            sb.append("GPU ")
+            sb.append("GPU* ")
             when {
                 snap.gpuState < 0 -> sb.append("N/A")
                 snap.gpuState == 0 || snap.gpuBusy < 0f -> sb.append("…")

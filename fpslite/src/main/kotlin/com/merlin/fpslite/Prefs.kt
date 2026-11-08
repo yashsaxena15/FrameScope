@@ -17,9 +17,22 @@ class Prefs(ctx: Context) {
         get() = sp.getBoolean("cpuFreq", true)
         set(v) = sp.edit().putBoolean("cpuFreq", v).apply()
 
+    /**
+     * Experimental: GPU data from perfetto tracepoints. On MediaTek Dimensity 9000+
+     * the GPU's own microcontroller does DVFS and the kernel event stays at a few
+     * coarse steps, so values are not representative there. Off by default.
+     */
     var showGpu: Boolean
-        get() = sp.getBoolean("gpu", true)
-        set(v) = sp.edit().putBoolean("gpu", v).apply()
+        get() = sp.getBoolean("gpuExperimental", false)
+        set(v) = sp.edit().putBoolean("gpuExperimental", v).apply()
+
+    var showRam: Boolean
+        get() = sp.getBoolean("ram", true)
+        set(v) = sp.edit().putBoolean("ram", v).apply()
+
+    var showSwap: Boolean
+        get() = sp.getBoolean("swap", false)
+        set(v) = sp.edit().putBoolean("swap", v).apply()
 
     var showTemps: Boolean
         get() = sp.getBoolean("temps", true)

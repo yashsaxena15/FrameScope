@@ -191,4 +191,29 @@ class FpsCoreTest {
         assertEquals(rest.size, second)
         assertEquals(598_000L, agg.maxSeenKHz)
     }
+
+    // ── Memory ───────────────────────────────────────────────────────────────
+
+    @Test fun parsesMeminfoFromPoco() {
+        val text = """
+            MemTotal:       11539412 kB
+            MemFree:          149276 kB
+            MemAvailable:    2268328 kB
+            Buffers:            1840 kB
+            SwapCached:        12000 kB
+            SwapTotal:      12582908 kB
+            SwapFree:        7587732 kB
+        """.trimIndent()
+        val m = MemInfo.parse(text, MemInfo())
+        assertEquals(11539412L, m.totalKb)
+        assertEquals(2268328L, m.availableKb)
+        assertEquals(11539412L - 2268328L, m.usedKb)
+        assertEquals(12582908L - 7587732L, m.swapUsedKb)
+    }
+
+    @Test fun parsesProcessRss() {
+        val status = "Name:\tUnityMain\nVmPeak:\t9999 kB\nVmRSS:\t 1687512 kB\nRssAnon:\t 1122832 kB\n"
+        assertEquals(1687512L, MemInfo.processRssKb(status))
+        assertEquals(-1L, MemInfo.processRssKb("Name:\tx\n"))
+    }
 }

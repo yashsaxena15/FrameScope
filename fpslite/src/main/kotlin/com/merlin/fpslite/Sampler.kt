@@ -13,6 +13,7 @@ import com.merlin.fpscore.FpsStats
 import com.merlin.fpscore.FrameTracker
 import com.merlin.fpscore.LatencyParser
 import com.merlin.fpscore.LayerResolver
+import com.merlin.fpscore.MemInfo
 import com.merlin.fpscore.ThermalParser
 
 /** Everything the overlay draws. Primitive fields only, copied under a lock. */
@@ -38,6 +39,11 @@ class Snapshot {
     var tCpu = Float.NaN
     var tGpu = Float.NaN
     var tBattery = Float.NaN
+    var ramUsedMB = -1
+    var ramTotalMB = -1
+    var appRamMB = -1
+    var swapUsedMB = -1
+    var swapTotalMB = -1
 
     fun copyFrom(o: Snapshot) {
         status = o.status; pkg = o.pkg
@@ -48,6 +54,8 @@ class Snapshot {
         System.arraycopy(o.clusterMHz, 0, clusterMHz, 0, o.clusters); clusters = o.clusters
         gpuBusy = o.gpuBusy; gpuMHz = o.gpuMHz; gpuState = o.gpuState
         tCpu = o.tCpu; tGpu = o.tGpu; tBattery = o.tBattery
+        ramUsedMB = o.ramUsedMB; ramTotalMB = o.ramTotalMB; appRamMB = o.appRamMB
+        swapUsedMB = o.swapUsedMB; swapTotalMB = o.swapTotalMB
     }
 
     companion object {
@@ -58,7 +66,7 @@ class Snapshot {
 
 /**
  * Polls on one background thread. FPS every [Prefs.pollMs] (default 250 ms);
- * CPU/GPU every 1 s and temperatures every 2 s, only when enabled.
+ * CPU/RAM/GPU every 1 s and temperatures every 2 s, only when enabled.
  */
 class Sampler(private val ctx: Context, private val prefs: Prefs, private val onUpdate: Runnable) {
     val lock = Any()
@@ -74,6 +82,11 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private val tracker = FrameTracker(4096)
     private val stats = FpsStats()
     private val cpuLoad = CpuLoad()
+    private val memInfo = MemInfo()
+    private var appPid = -1
+    private var appPidFor: String? = null
+    private var nextPidLookupAt = 0L
+    private var nextRamAt = 0L
 
     private var component: String? = null
     private var layer: String? = null
@@ -95,6 +108,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private var wantCpu = false
     private var wantGpu = false
     private var wantTemps = false
+    private var wantRam = false
 
     private val tick = object : Runnable {
         override fun run() {
@@ -142,6 +156,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         wantCpu = extras && (prefs.showCpuLoad || prefs.showCpuFreq)
         wantGpu = extras && prefs.showGpu
         wantTemps = extras && prefs.showTemps
+        wantRam = extras && prefs.showRam
         if (::handler.isInitialized && !wantGpu && gpuStarted) handler.post { stopGpu() }
     }
 
@@ -170,6 +185,8 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             lastSvc = svc
             gpuStarted = false
             clusterPaths = null
+            appPid = -1
+            appPidFor = null
             component = null
             layer = null
         }
@@ -223,6 +240,10 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         if (wantCpu && now >= nextCpuAt) {
             nextCpuAt = now + 1000
             sampleCpu(svc)
+        }
+        if (wantRam && now >= nextRamAt) {
+            nextRamAt = now + 1000
+            sampleRam(svc, now)
         }
         if (wantGpu && now >= nextGpuAt) {
             nextGpuAt = now + 1000
@@ -282,6 +303,37 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         if (stat != null) {
             cpuLoad.update(stat)
             work.cpuLoad = cpuLoad.load[0]
+        }
+    }
+
+    /**
+     * System RAM from /proc/meminfo (used = MemTotal − MemAvailable) and the
+     * foreground app's resident memory (VmRSS from /proc/<pid>/status; shell can
+     * read it thanks to the readproc group). The pid is looked up only when the
+     * focused app changes or the process disappears.
+     */
+    private fun sampleRam(svc: PrivApi, now: Long) {
+        val pkg = component?.let { LayerResolver.packageOf(it) }
+        if (pkg != null && (pkg != appPidFor || appPid <= 0) && now >= nextPidLookupAt) {
+            nextPidLookupAt = now + 5000
+            appPidFor = pkg
+            appPid = svc.exec("pidof $pkg")?.trim()?.split(' ')?.firstOrNull()?.toIntOrNull() ?: -1
+        }
+        val paths = if (appPid > 0) arrayOf("/proc/meminfo", "/proc/$appPid/status") else arrayOf("/proc/meminfo")
+        val res = svc.readTexts(paths)
+        res[0]?.let {
+            MemInfo.parse(it, memInfo)
+            work.ramTotalMB = (memInfo.totalKb / 1024).toInt()
+            work.ramUsedMB = (memInfo.usedKb / 1024).toInt()
+            work.swapTotalMB = (memInfo.swapTotalKb / 1024).toInt()
+            work.swapUsedMB = (memInfo.swapUsedKb / 1024).toInt()
+        }
+        if (appPid > 0) {
+            val rss = res.getOrNull(1)?.let { MemInfo.processRssKb(it) } ?: -1L
+            if (rss < 0) appPid = -1 // process gone; look it up again later
+            work.appRamMB = if (rss >= 0) (rss / 1024).toInt() else -1
+        } else {
+            work.appRamMB = -1
         }
     }
 

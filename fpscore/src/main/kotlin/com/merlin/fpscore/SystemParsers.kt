@@ -79,3 +79,58 @@ object ThermalParser {
 
 /** CPU frequency cluster layout from sysfs (policy dirs + related_cpus). */
 data class CpuCluster(val policyPath: String, val cpus: List<Int>, val maxKHz: Long)
+
+/** Values from /proc/meminfo in kB (-1 when missing). */
+class MemInfo {
+    var totalKb = -1L
+    var availableKb = -1L
+    var swapTotalKb = -1L
+    var swapFreeKb = -1L
+
+    val usedKb: Long get() = if (totalKb > 0 && availableKb >= 0) totalKb - availableKb else -1L
+    val swapUsedKb: Long get() = if (swapTotalKb > 0 && swapFreeKb >= 0) swapTotalKb - swapFreeKb else -1L
+
+    companion object {
+        fun parse(text: CharSequence, out: MemInfo): MemInfo {
+            out.totalKb = -1; out.availableKb = -1; out.swapTotalKb = -1; out.swapFreeKb = -1
+            for (line in text.lineSequence()) {
+                val colon = line.indexOf(':')
+                if (colon <= 0) continue
+                val target = when (line.substring(0, colon)) {
+                    "MemTotal" -> 0
+                    "MemAvailable" -> 1
+                    "SwapTotal" -> 2
+                    "SwapFree" -> 3
+                    else -> continue
+                }
+                val v = kbValue(line, colon + 1)
+                when (target) {
+                    0 -> out.totalKb = v
+                    1 -> out.availableKb = v
+                    2 -> out.swapTotalKb = v
+                    3 -> out.swapFreeKb = v
+                }
+            }
+            return out
+        }
+
+        /** Resident memory of a process from /proc/<pid>/status (VmRSS, kB), or -1. */
+        fun processRssKb(status: CharSequence): Long {
+            for (line in status.lineSequence()) {
+                if (line.startsWith("VmRSS:")) return kbValue(line, 6)
+            }
+            return -1L
+        }
+
+        private fun kbValue(line: String, from: Int): Long {
+            var i = from
+            while (i < line.length && !line[i].isDigit()) i++
+            var v = 0L
+            var any = false
+            while (i < line.length && line[i].isDigit()) {
+                v = v * 10 + (line[i] - '0'); i++; any = true
+            }
+            return if (any) v else -1L
+        }
+    }
+}

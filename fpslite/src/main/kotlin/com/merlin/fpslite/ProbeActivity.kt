@@ -103,6 +103,14 @@ class ProbeActivity : Activity() {
         }
         sb.append("/proc/stat: ").append(if (svc.readText("/proc/stat") != null) "readable" else "DENIED").append('\n')
 
+        h("RAM")
+        val mi = svc.readText("/proc/meminfo")
+        if (mi == null) sb.append("/proc/meminfo DENIED\n") else {
+            val m = com.merlin.fpscore.MemInfo.parse(mi, com.merlin.fpscore.MemInfo())
+            sb.append("total=").append(m.totalKb / 1024).append("MB used=").append(m.usedKb / 1024)
+                .append("MB swap=").append(m.swapUsedKb / 1024).append('/').append(m.swapTotalKb / 1024).append("MB\n")
+        }
+
         h("GPU sysfs candidates")
         for (path in GPU_PATHS) {
             val v = svc.readText(path)
@@ -131,6 +139,10 @@ class ProbeActivity : Activity() {
                 sb.append(String.format("%3d frames %6.1f fps  %s\n", n, fps, c))
             }
             if (cands.isEmpty()) sb.append("no candidate layers\n")
+            val pkg = LayerResolver.packageOf(comp)
+            val pid = svc.exec("pidof $pkg")?.trim()?.split(' ')?.firstOrNull()?.toIntOrNull()
+            val rss = pid?.let { svc.readText("/proc/$it/status") }?.let { com.merlin.fpscore.MemInfo.processRssKb(it) }
+            sb.append("app pid=").append(pid).append(" rss=").append(rss?.let { "${it / 1024}MB" } ?: "DENIED").append('\n')
         }
 
         if (gpu) {

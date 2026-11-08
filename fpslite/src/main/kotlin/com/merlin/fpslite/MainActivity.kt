@@ -126,7 +126,7 @@ class MainActivity : Activity() {
         val names = arrayOf(
             "Minimal — FPS number only",
             "Standard — FPS, avg, 1%/0.1% low, frame-time graph",
-            "Full — Standard + CPU, GPU, temperatures"
+            "Full — Standard + CPU, RAM, temperatures"
         )
         names.forEachIndexed { i, n ->
             group.addView(RadioButton(this).apply {
@@ -144,7 +144,9 @@ class MainActivity : Activity() {
         section(root, "Full preset metrics")
         check(root, "CPU load", prefs.showCpuLoad) { prefs.showCpuLoad = it }
         check(root, "CPU frequency per cluster", prefs.showCpuFreq) { prefs.showCpuFreq = it }
-        check(root, "GPU load + frequency (perfetto)", prefs.showGpu) { prefs.showGpu = it }
+        check(root, "RAM usage (system + current app)", prefs.showRam) { prefs.showRam = it }
+        check(root, "Also show swap / memory extension", prefs.showSwap) { prefs.showSwap = it }
+        check(root, "GPU load + frequency (experimental — not accurate on MediaTek)", prefs.showGpu) { prefs.showGpu = it }
         check(root, "Temperatures (CPU / GPU / battery)", prefs.showTemps) { prefs.showTemps = it }
 
         section(root, "Appearance & sampling")
