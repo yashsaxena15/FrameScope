@@ -17,3 +17,7 @@ keystore.properties
 
 # Large binaries are fine as test fixtures only
 !fpscore/src/test/resources/*.pftrace
+
+# Local design previews (artifacts) — not published
+artifacts/
+design/*.html
