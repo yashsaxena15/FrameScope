@@ -38,6 +38,9 @@ class HelpActivity : Activity() {
         item("gap", "only shown if the overlay missed frames because polling was too slow (lower the poll interval).")
         item("Graph", "time of each of the last 120 frames; spikes are slow frames. The green line is one screen refresh.")
 
+        section("Compact preset")
+        item("60 FPS · CPU 23% · RAM 79% · 42°", "frames per second, total CPU usage, RAM used by the whole device, and SoC temperature, in one line.")
+
         section("System (Full preset)")
         item("CPU 50%", "total CPU usage across all cores.")
         item("1.0|0.6|0.8 GHz", "current speed of each CPU core cluster, ordered from the slowest cluster to the fastest (e.g. efficiency | performance | prime).")

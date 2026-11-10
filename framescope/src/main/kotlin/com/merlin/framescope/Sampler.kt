@@ -111,6 +111,8 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private var wantGpu = false
     private var wantTemps = false
     private var wantRam = false
+    /** Per-app RAM needs a pid lookup; the Compact preset only shows system RAM %. */
+    private var wantAppRam = false
 
     private val tick = object : Runnable {
         override fun run() {
@@ -160,10 +162,12 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         pollMs = prefs.pollMs.toLong().coerceIn(100, 500)
         fpsWindowNs = prefs.fpsWindowMs.toLong().coerceIn(250, 2000) * 1_000_000L
         extras = prefs.wantsExtras
-        wantCpu = extras && (prefs.showCpuLoad || prefs.showCpuFreq)
+        val compact = prefs.preset == Prefs.PRESET_COMPACT
+        wantCpu = compact || (extras && (prefs.showCpuLoad || prefs.showCpuFreq))
         wantGpu = extras && prefs.showGpu
-        wantTemps = extras && prefs.showTemps
-        wantRam = extras && prefs.showRam
+        wantTemps = compact || (extras && prefs.showTemps)
+        wantRam = compact || (extras && prefs.showRam)
+        wantAppRam = extras && prefs.showRam
         if (::handler.isInitialized && !wantGpu && gpuStarted) handler.post { stopGpu() }
     }
 
@@ -349,7 +353,9 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
      * focused app changes or the process disappears.
      */
     private fun sampleRam(svc: PrivApi, now: Long) {
-        val pkg = layerPkg ?: component?.let { LayerResolver.packageOf(it) } // app being measured, not a popup on top
+        val pkg = if (!wantAppRam) null
+            else layerPkg ?: component?.let { LayerResolver.packageOf(it) } // app being measured, not a popup on top
+        if (!wantAppRam) appPid = -1
         if (pkg != null && (pkg != appPidFor || appPid <= 0) && now >= nextPidLookupAt) {
             nextPidLookupAt = now + 5000
             appPidFor = pkg

@@ -42,6 +42,15 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         color = 0x8066BB6A.toInt()
         style = Paint.Style.STROKE
     }
+    // Compact preset: bright values, dim labels, one line.
+    private val compactVal = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+    }
+    private val compactLabel = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF9AB0C0.toInt()
+        typeface = Typeface.MONOSPACE
+    }
     private val path = Path()
     private val rect = RectF()
 
@@ -80,6 +89,8 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         dimPaint.textSize = 10 * density * s
         graphPaint.strokeWidth = 1.2f * density
         targetPaint.strokeWidth = 1f * density
+        compactVal.textSize = 13 * density * s
+        compactLabel.textSize = 11 * density * s
         lineH = textPaint.fontSpacing
         bigH = bigPaint.fontSpacing
         graphH = 34 * density * s
@@ -96,6 +107,16 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
             Prefs.PRESET_MINIMAL -> {
                 widthPx = (bigPaint.measureText("000") + 2 * pad).toInt()
                 heightPx = (bigH + 2 * pad).toInt()
+            }
+            Prefs.PRESET_COMPACT -> {
+                // Widest realistic content: "144 FPS · CPU 100% · RAM 100% · 100°"
+                val w = compactVal.measureText("144") + compactLabel.measureText(" FPS") +
+                    3 * compactLabel.measureText(SEP) +
+                    compactLabel.measureText("CPU ") + compactVal.measureText("100%") +
+                    compactLabel.measureText("RAM ") + compactVal.measureText("100%") +
+                    compactVal.measureText("100°")
+                widthPx = (w + 2 * pad + 2 * density).toInt()
+                heightPx = (compactVal.fontSpacing + 1.4f * pad).toInt()
             }
             else -> {
                 var widest = textPaint.measureText("avg 000 1% 000 .1% 000")
@@ -126,6 +147,11 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         rect.set(0f, 0f, w, height.toFloat())
         val r = 8 * density
         canvas.drawRoundRect(rect, r, r, bgPaint)
+
+        if (preset == Prefs.PRESET_COMPACT) {
+            drawCompact(canvas)
+            return
+        }
 
         var y = pad - bigPaint.ascent()
         val x = pad
@@ -241,6 +267,49 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         }
     }
 
+    /** `60 FPS · CPU 23% · RAM 79% · 42°` — or the status message when not connected. */
+    private fun drawCompact(canvas: Canvas) {
+        val y = (height - compactVal.descent() - compactVal.ascent()) / 2f
+        var x = pad
+        if (snap.status.isNotEmpty() && snap.fps < 0f) {
+            canvas.drawText(snap.status, x, y, compactLabel)
+            return
+        }
+        // FPS
+        sb.setLength(0)
+        if (snap.fps < 0f) sb.append("--") else appendFixed(sb, snap.fps, 0)
+        x = seg(canvas, x, y, compactVal)
+        x = label(canvas, x, y, " FPS")
+        // CPU %
+        x = label(canvas, x, y, SEP + "CPU ")
+        sb.setLength(0)
+        if (snap.cpuLoad < 0f) sb.append("--") else appendFixed(sb, snap.cpuLoad, 0)
+        sb.append('%')
+        x = seg(canvas, x, y, compactVal)
+        // RAM % (whole device)
+        x = label(canvas, x, y, SEP + "RAM ")
+        sb.setLength(0)
+        if (snap.ramTotalMB > 0 && snap.ramUsedMB >= 0) appendFixed(sb, snap.ramUsedMB * 100f / snap.ramTotalMB, 0) else sb.append("--")
+        sb.append('%')
+        x = seg(canvas, x, y, compactVal)
+        // SoC temperature
+        x = label(canvas, x, y, SEP)
+        sb.setLength(0)
+        if (snap.tSoc.isNaN()) sb.append("--") else appendFixed(sb, snap.tSoc, 0)
+        sb.append('°')
+        seg(canvas, x, y, compactVal)
+    }
+
+    private fun seg(canvas: Canvas, x: Float, y: Float, p: Paint): Float {
+        canvas.drawText(sb, 0, sb.length, x, y, p)
+        return x + p.measureText(sb, 0, sb.length)
+    }
+
+    private fun label(canvas: Canvas, x: Float, y: Float, text: String): Float {
+        canvas.drawText(text, x, y, compactLabel)
+        return x + compactLabel.measureText(text)
+    }
+
     private fun drawGraph(canvas: Canvas, left: Float, top: Float, w: Float, h: Float) {
         val n = snap.graphN
         val targetMs = if (snap.refreshHz > 0f) 1000f / snap.refreshHz else 16.67f
@@ -269,6 +338,8 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
     }
 
     companion object {
+        private const val SEP = "  ·  "
+
         /** Appends a non-negative number with [decimals] (0–2) digits without allocating. */
         fun appendFixed(sb: StringBuilder, v: Float, decimals: Int) {
             var value = v

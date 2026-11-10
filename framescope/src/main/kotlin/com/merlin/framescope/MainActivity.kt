@@ -134,14 +134,16 @@ class MainActivity : Activity() {
 
         section(root, "Overlay")
         val group = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        val names = arrayOf(
-            "Minimal — FPS number only",
-            "Standard — FPS, avg, 1%/0.1% low, frame-time graph",
-            "Full — Standard + CPU, RAM, temperatures"
+        // Display order; ids are 100 + the stored preset value.
+        val presets = arrayOf(
+            Prefs.PRESET_MINIMAL to "Minimal — FPS number only",
+            Prefs.PRESET_COMPACT to "Compact — FPS, CPU %, RAM %, SoC temperature in one line",
+            Prefs.PRESET_STANDARD to "Standard — FPS, avg, 1%/0.1% low, frame-time graph",
+            Prefs.PRESET_FULL to "Full — Standard + CPU, RAM, temperatures"
         )
-        names.forEachIndexed { i, n ->
+        presets.forEach { (value, n) ->
             group.addView(RadioButton(this).apply {
-                id = 100 + i
+                id = 100 + value
                 text = n
             })
         }

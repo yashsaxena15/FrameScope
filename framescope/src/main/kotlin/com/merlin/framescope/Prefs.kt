@@ -76,5 +76,7 @@ class Prefs(ctx: Context) {
         const val PRESET_MINIMAL = 0
         const val PRESET_STANDARD = 1
         const val PRESET_FULL = 2
+        /** One line: FPS · CPU % · RAM % · SoC °C. (Value 3 keeps stored presets stable.) */
+        const val PRESET_COMPACT = 3
     }
 }

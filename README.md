@@ -29,7 +29,11 @@ uses almost no memory or CPU, and has **no internet permission**.
 - **CPU.** Total load, plus the current frequency of each core cluster, ordered slowest to fastest.
 - **Memory.** System RAM used / usable, the RAM of the app in front, and optional swap (ZRAM + memory extension).
 - **Temperatures.** SoC and battery, from Android's thermal service.
-- **Three presets:** Minimal (FPS only), Standard (FPS stats + graph), Full (+ CPU, RAM, temperatures).
+- **Four presets:**
+  - **Minimal:** FPS only.
+  - **Compact:** one line with FPS, CPU %, RAM % and SoC temperature.
+  - **Standard:** FPS stats + graph.
+  - **Full:** Standard + CPU, RAM and temperatures.
 - **Made for gaming.** Drag to position, lock to let touches pass through, adjustable size and opacity. **Double-tap to reset stats** at the start of a match.
 - **Quick Settings tile**, notification controls, and a built-in **?** help screen.
 - **Lightweight.** About a 140 KB APK, no Compose, AppCompat or analytics, and a Canvas-drawn overlay that allocates nothing per frame.
@@ -52,6 +56,10 @@ uses almost no memory or CPU, and has **no internet permission**.
 > Shizuku has to be started again after each reboot when it runs over ADB or Wireless debugging.
 
 ## Reading the overlay
+
+**Compact preset:** `60 FPS · CPU 23% · RAM 79% · 42°` shows FPS, total CPU usage, RAM used by the whole device, and SoC temperature.
+
+**Standard / Full presets:**
 
 | Overlay | Meaning |
 |---|---|
