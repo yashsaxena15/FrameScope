@@ -332,4 +332,27 @@ class FpsCoreTest {
         val fps = (n - 1) * 1e9 / (buf[n - 1] - buf[0])
         assertTrue("fps=$fps", fps in 55.0..62.0)
     }
+
+    // ── Popup / app-switch layer choice ──────────────────────────────────────
+
+    private val game = "SurfaceView - com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity#0"
+    private val dialog = "com.google.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity#0"
+
+    @Test fun popupOverRunningGameKeepsMeasuringTheGame() {
+        assertEquals(game, LayerChooser.choose(game, 60, true, listOf(dialog to 3)))
+    }
+
+    @Test fun realAppSwitchMovesToTheNewApp() {
+        // The old game is in the background: it stopped drawing.
+        assertEquals(dialog, LayerChooser.choose(game, 0, true, listOf(dialog to 40)))
+        // The old app was closed: its layer is gone from --list.
+        assertEquals(dialog, LayerChooser.choose(game, 60, false, listOf(dialog to 0)))
+    }
+
+    @Test fun nothingDrawingPicksTheNewAppsBestRankedLayer() {
+        assertEquals(dialog, LayerChooser.choose(game, 0, true, listOf(dialog to 0, "other#0" to 0)))
+        assertEquals(dialog, LayerChooser.choose(null, 0, false, listOf(dialog to 0)))
+        assertEquals(game, LayerChooser.choose(game, 0, true, emptyList()))
+        assertEquals(null, LayerChooser.choose(null, 0, false, emptyList()))
+    }
 }

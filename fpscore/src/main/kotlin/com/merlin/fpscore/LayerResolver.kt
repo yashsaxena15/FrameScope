@@ -104,3 +104,32 @@ object LayerResolver {
 
     fun packageOf(component: String): String = component.substringBefore('/')
 }
+
+/**
+ * Decides which layer to measure when the focused app changes.
+ *
+ * A popup or permission dialog takes focus but barely draws, while the game
+ * behind it keeps rendering. So the layer currently being measured competes with
+ * the newly focused app's candidates on frames presented in the last second.
+ * It stays only if it is still listed by SurfaceFlinger and strictly out-draws
+ * every new candidate. A real app switch stops the old app's frames, so the new
+ * app wins; if nothing draws at all, the new app's best-ranked layer is chosen.
+ */
+object LayerChooser {
+    /**
+     * @param current layer being measured now (null if none)
+     * @param currentFrames frames it presented in the last second
+     * @param currentListed whether it still appears in `--list`
+     * @param candidates new app's candidate layers, best-ranked first, each with its recent frame count
+     * @return the layer to measure, or null if there is nothing to measure
+     */
+    fun choose(current: String?, currentFrames: Int, currentListed: Boolean, candidates: List<Pair<String, Int>>): String? {
+        var best: String? = null
+        var bestFrames = -1
+        for ((name, frames) in candidates) {
+            if (frames > bestFrames) { best = name; bestFrames = frames }
+        }
+        if (current != null && currentListed && currentFrames > maxOf(bestFrames, 0)) return current
+        return best ?: if (current != null && currentListed) current else null
+    }
+}

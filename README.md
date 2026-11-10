@@ -95,7 +95,6 @@ FrameScope collects nothing and has **no internet permission**. See [PRIVACY.md]
 
 - **GPU load and frequency** is an experimental option, off by default. Without root, most phones block the GPU's sysfs nodes, and on MediaTek Dimensity 9000+ the available kernel events do not reflect the real GPU clock.
 - **Temperatures.** Without root, many phones report one chip-wide value for CPU and GPU, so FrameScope shows it once as *SoC*.
-- **Popups.** While a popup or permission dialog has focus, FrameScope measures that window instead of the game behind it.
 
 ## Building
 

@@ -12,6 +12,7 @@ import com.merlin.fpscore.CpuLoad
 import com.merlin.fpscore.FpsStats
 import com.merlin.fpscore.FrameTracker
 import com.merlin.fpscore.LatencyParser
+import com.merlin.fpscore.LayerChooser
 import com.merlin.fpscore.LayerResolver
 import com.merlin.fpscore.MemInfo
 import com.merlin.fpscore.ThermalParser
@@ -89,6 +90,8 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
 
     private var component: String? = null
     private var layer: String? = null
+    /** Package of the layer being measured; differs from the focus while a popup is on top. */
+    private var layerPkg: String? = null
     private var lastFrameAt = 0L
     private var nextFocusAt = 0L
     private var nextResolveAt = 0L
@@ -192,6 +195,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             appPid = -1
             appPidFor = null
             component = null
+            layerPkg = null
             layer = null
         }
         val now = SystemClock.uptimeMillis()
@@ -201,7 +205,13 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             val comp = LayerResolver.focusedComponent(svc.dump("window", arrayOf("displays")) ?: "")
             if (comp != null && comp != component) {
                 component = comp
-                work.pkg = LayerResolver.packageOf(comp)
+                resolveLayer(svc)
+            } else if (comp != null && layerPkg != null && layerPkg != LayerResolver.packageOf(comp) &&
+                now >= nextResolveAt
+            ) {
+                // A popup has focus and we kept measuring the app behind it; re-check
+                // in case that app stopped drawing (then the popup's app takes over).
+                nextResolveAt = now + 2000
                 resolveLayer(svc)
             }
         }
@@ -268,25 +278,37 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
 
     private fun resolveLayer(svc: PrivApi) {
         val comp = component ?: return
+        val pkg = LayerResolver.packageOf(comp)
         val list = svc.dump("SurfaceFlinger", arrayOf("--list")) ?: return
-        val cands = LayerResolver.candidates(list, LayerResolver.packageOf(comp), comp)
-        var best: String? = null
-        var bestFrames = -1
         val cutoff = System.nanoTime() - 1_000_000_000L
-        for (c in cands.take(4)) {
-            val n = latencyParser.parse(svc.dump("SurfaceFlinger", arrayOf("--latency", c)) ?: "", tsBuf)
+        fun recentFrames(layerName: String): Int {
+            val n = latencyParser.parse(svc.dump("SurfaceFlinger", arrayOf("--latency", layerName)) ?: "", tsBuf)
             var recent = 0
             for (i in 0 until n) if (tsBuf[i] > cutoff) recent++
-            if (recent > bestFrames) {
-                bestFrames = recent
-                best = c
-            }
+            return recent
         }
-        if (best != layer) {
-            layer = best
+        val cands = LayerResolver.candidates(list, pkg, comp).take(4).map { it to recentFrames(it) }
+
+        // Keep measuring the current layer if it belongs to another app that is still
+        // drawing (a popup or dialog is on top of a running game).
+        val cur = layer
+        val competing = cur != null && layerPkg != null && layerPkg != pkg
+        val curListed = competing && list.lineSequence().any { LayerResolver.extractName(it) == cur }
+        val curFrames = if (curListed) recentFrames(cur!!) else 0
+        val chosen = LayerChooser.choose(if (competing) cur else null, curFrames, curListed, cands)
+
+        val chosenPkg = when {
+            chosen == null -> null
+            chosen == cur && competing && curListed -> layerPkg
+            else -> pkg
+        }
+        if (chosen != layer) {
+            layer = chosen
             tracker.reset()
             lastFrameAt = SystemClock.uptimeMillis()
         }
+        layerPkg = chosenPkg
+        work.pkg = chosenPkg ?: pkg
     }
 
     private fun sampleCpu(svc: PrivApi) {
@@ -327,7 +349,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
      * focused app changes or the process disappears.
      */
     private fun sampleRam(svc: PrivApi, now: Long) {
-        val pkg = component?.let { LayerResolver.packageOf(it) }
+        val pkg = layerPkg ?: component?.let { LayerResolver.packageOf(it) } // app being measured, not a popup on top
         if (pkg != null && (pkg != appPidFor || appPid <= 0) && now >= nextPidLookupAt) {
             nextPidLookupAt = now + 5000
             appPidFor = pkg
