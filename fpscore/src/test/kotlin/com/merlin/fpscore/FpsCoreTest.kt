@@ -278,4 +278,15 @@ class FpsCoreTest {
             LayerResolver.normalize("com.pubg.imobile/com.epicgames.ue4.GameActivity"))
         assertEquals("a.b/a.b.Main", LayerResolver.normalize("a.b/.Main"))
     }
+
+    @Test fun vivoSubwaySurfersPicksBlastLayerAndRuns60Fps() {
+        val comp = LayerResolver.focusedComponent(res("vivo1938_window_focus_subway.txt"))!!
+        val c = LayerResolver.candidates(res("vivo1938_sf_list_subway.txt"), LayerResolver.packageOf(comp), comp)
+        assertEquals("SurfaceView[com.kiloo.subwaysurf/com.sybogames.chili.multidex.ChiliMultidexSupportActivity](BLAST)#0", c[0])
+        val p = LatencyParser()
+        val buf = LongArray(256)
+        val n = p.parse(res("vivo1938_latency_subway.txt"), buf) // contains pending (INT64_MAX) rows
+        val fps = (n - 1) * 1e9 / (buf[n - 1] - buf[0])
+        assertTrue("fps=$fps", fps in 40.0..61.0)
+    }
 }
