@@ -1,0 +1,61 @@
+Root#0
+WindowedMagnification:0:31#0
+HideDisplayCutout:0:16#0
+OneHandedBackgroundPanel:0:1#0
+OneHanded:0:1#0
+FullscreenMagnification:0:1#0
+Leaf:0:1#0
+aa2982e com.android.systemui.ImageWallpaper#0
+com.android.systemui.ImageWallpaper#0
+OneHanded:2:16#0
+FullscreenMagnification:2:14#0
+DefaultTaskDisplayArea#0
+Task=1#0
+Task=7#1
+Task=19685#0
+Task=19684#0
+Task=19683#0
+Task=19682#0
+Task=19681#0
+Task=19722#0
+Task=19717#0
+Task=19723#0
+ActivityRecord{d0a9f8 u0 com.android.settings/.Settings t19723 d0}#0
+8caf119 com.android.settings/com.android.settings.Settings#0
+ActivityRecord{884475b u0 com.android.settings/.Settings$SystemManagementActivity t19723 d0}#0
+e0a2f0e com.android.settings/com.android.settings.Settings$SystemManagementActivity#0
+ActivityRecord{a78d588 u0 com.android.settings/.Settings$DevelopmentSettingsDashboardActivity t19723 d0}#0
+3434a48 com.android.settings/com.android.settings.Settings$DevelopmentSettingsDashboardActivity#0
+ActivityRecord{7f3bbd8 u0 com.android.settings/.SubSettings t19723 d0}#0
+59237dd com.android.settings/com.android.settings.SubSettings#0
+com.android.settings/com.android.settings.SubSettings#0
+Leaf:3:14#0
+OneHanded:17:17#0
+FullscreenMagnification:17:17#0
+Leaf:17:17#0
+HideDisplayCutout:18:18#0
+OneHanded:18:18#0
+FullscreenMagnification:18:18#0
+Leaf:18:18#0
+OneHanded:19:19#0
+FullscreenMagnification:19:19#0
+Leaf:19:19#0
+HideDisplayCutout:20:23#0
+OneHanded:20:23#0
+FullscreenMagnification:20:23#0
+Leaf:20:23#0
+Leaf:24:25#0
+HideDisplayCutout:26:31#0
+OneHanded:26:31#0
+FullscreenMagnification:26:27#0
+Leaf:26:27#0
+Leaf:28:28#0
+FullscreenMagnification:29:31#0
+Leaf:29:31#0
+HideDisplayCutout:32:35#0
+OneHanded:32:35#0
+Leaf:32:32#0
+FullscreenMagnification:33:35#0
+Leaf:33:35#0
+Leaf:36:36#0
+Display Overlays#0

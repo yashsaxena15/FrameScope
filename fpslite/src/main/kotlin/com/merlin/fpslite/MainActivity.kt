@@ -155,7 +155,7 @@ class MainActivity : Activity() {
         section(root, "Full preset metrics")
         check(root, "CPU load", prefs.showCpuLoad) { prefs.showCpuLoad = it }
         check(root, "CPU frequency per core cluster", prefs.showCpuFreq) { prefs.showCpuFreq = it }
-        hint(root, "Shown as efficiency | performance | prime cores, in GHz (e.g. 1.0|0.6|0.8 GHz)")
+        hint(root, "Shown per core cluster from slowest to fastest, in GHz (e.g. 1.0|0.6|0.8 GHz)")
         check(root, "RAM usage (system + current app)", prefs.showRam) { prefs.showRam = it }
         check(root, "Swap (ZRAM + memory extension / virtual RAM)", prefs.showSwap) { prefs.showSwap = it }
         check(root, "GPU load + frequency (experimental — not accurate on MediaTek)", prefs.showGpu) { prefs.showGpu = it }

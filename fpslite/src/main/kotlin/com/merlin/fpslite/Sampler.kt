@@ -292,8 +292,15 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private fun sampleCpu(svc: PrivApi) {
         if (clusterPaths == null) {
             val base = "/sys/devices/system/cpu/cpufreq"
-            val policies = svc.listDir(base).filter { it.startsWith("policy") }
-                .sortedBy { it.removePrefix("policy").toIntOrNull() ?: 0 }
+            // Order clusters slowest → fastest by their max frequency. Policy numbering
+            // does not imply speed: on MT6765 (vivo 1938) policy0 is the 2.3 GHz
+            // cluster and policy4 the 1.8 GHz one; on Dimensity 9500s it is reversed.
+            val names = svc.listDir(base).filter { it.startsWith("policy") }
+            val maxes = svc.readTexts(names.map { "$base/$it/cpuinfo_max_freq" }.toTypedArray())
+            val policies = names.indices
+                .sortedWith(compareBy({ maxes.getOrNull(it)?.trim()?.toLongOrNull() ?: Long.MAX_VALUE },
+                    { names[it].removePrefix("policy").toIntOrNull() ?: 0 }))
+                .map { names[it] }
             val paths = policies.take(Snapshot.MAX_CLUSTERS).map { "$base/$it/scaling_cur_freq" }
             clusterPaths = paths.toTypedArray()
             cpuPaths = (paths + "/proc/stat").toTypedArray()

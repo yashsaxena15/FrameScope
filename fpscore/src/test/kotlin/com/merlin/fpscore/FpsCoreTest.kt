@@ -240,4 +240,42 @@ class FpsCoreTest {
         assertEquals(60f, s.low1Fps, 0.5f)
         assertEquals(60f, t.currentFps(b.last() + 1_000_000L, 1_000_000_000L), 0.5f)
     }
+
+    // ── vivo 1938 (MT6765 / Helio P35, Android 12) ───────────────────────────
+
+    @Test fun vivoShortComponentIsNormalizedAndMatchesLayer() {
+        val comp = LayerResolver.focusedComponent(res("vivo1938_window_focus.txt"))
+        assertEquals("com.android.settings/com.android.settings.SubSettings", comp)
+        val c = LayerResolver.candidates(res("vivo1938_sf_list_settings.txt"), LayerResolver.packageOf(comp!!), comp)
+        assertEquals("com.android.settings/com.android.settings.SubSettings#0", c[0])
+        assertTrue(c.none { it.startsWith("ActivityRecord{") })
+    }
+
+    @Test fun vivoLatencyAt60Hz() {
+        val p = LatencyParser()
+        val buf = LongArray(256)
+        val n = p.parse(res("vivo1938_latency_60hz.txt"), buf)
+        assertEquals(16_666_667L, p.refreshPeriodNs)
+        assertTrue("n=$n", n > 50)
+        for (k in 1 until n) assertTrue(buf[k] > buf[k - 1])
+    }
+
+    @Test fun vivoThermalHasNoSocButHasCpuGpuBattery() {
+        val m = ThermalParser.parse(res("vivo1938_thermalservice.txt"))
+        assertEquals(null, m["SOC"])
+        assertNotNull(m["CPU"]); assertNotNull(m["GPU"]); assertNotNull(m["BATTERY"])
+    }
+
+    @Test fun vivoMeminfo() {
+        val m = MemInfo.parse(res("vivo1938_meminfo.txt"), MemInfo())
+        assertTrue(m.totalKb in 3_000_000L..4_200_000L) // 4 GB phone
+        assertTrue(m.usedKb > 0)
+        assertTrue(m.swapTotalKb > 0)
+    }
+
+    @Test fun normalizeLeavesFullComponentsAlone() {
+        assertEquals("com.pubg.imobile/com.epicgames.ue4.GameActivity",
+            LayerResolver.normalize("com.pubg.imobile/com.epicgames.ue4.GameActivity"))
+        assertEquals("a.b/a.b.Main", LayerResolver.normalize("a.b/.Main"))
+    }
 }

@@ -22,7 +22,7 @@ Requires Android 10+. Tested on a Poco X8 Pro Max (Dimensity 9500s, HyperOS 3 / 
 | `avg 59  1% 40  .1% 39` | Average FPS, 1% low and 0.1% low over the last 10 s |
 | `16.7ms  jank 4` | Latest frame time and stutter count (double-tap the overlay to reset) |
 | graph | Frame time of the last 120 frames; spikes are slow frames |
-| `CPU 50% 1.0\|0.6\|0.8 GHz` | CPU load and current speed of each core cluster (efficiency \| performance \| prime) |
+| `CPU 50% 1.0\|0.6\|0.8 GHz` | CPU load and current speed of each core cluster, slowest → fastest (e.g. efficiency \| performance \| prime) |
 | `RAM 8.6/11.0G 79% App 1.30G` | System RAM used / usable, and RAM of the app in front |
 | `Swap 4.5/12.0G 38%` | Swap in use: ZRAM + "memory extension" / virtual RAM (optional; not GPU memory) |
 | `SoC 46°  Bat 39°` | Chip and battery temperature from Android's thermal service |

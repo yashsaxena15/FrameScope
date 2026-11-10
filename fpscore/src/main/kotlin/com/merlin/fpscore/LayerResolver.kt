@@ -88,7 +88,18 @@ object LayerResolver {
         var end = start
         while (end < line.length && line[end] != ' ' && line[end] != '}') end++
         val token = line.substring(start, end)
-        return if (token.contains('/')) token else null
+        return if (token.contains('/')) normalize(token) else null
+    }
+
+    /**
+     * Expands the short form "pkg/.Activity" (used by ActivityRecord on Android 12,
+     * e.g. vivo 1938) to "pkg/pkg.Activity", which is how layer names spell it.
+     */
+    fun normalize(component: String): String {
+        val slash = component.indexOf('/')
+        if (slash < 0 || slash + 1 >= component.length || component[slash + 1] != '.') return component
+        val pkg = component.substring(0, slash)
+        return pkg + "/" + pkg + component.substring(slash + 1)
     }
 
     fun packageOf(component: String): String = component.substringBefore('/')

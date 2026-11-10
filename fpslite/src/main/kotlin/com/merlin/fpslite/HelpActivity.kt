@@ -40,7 +40,7 @@ class HelpActivity : Activity() {
 
         section("System (Full preset)")
         item("CPU 50%", "total CPU usage across all cores.")
-        item("1.0|0.6|0.8 GHz", "current speed of each CPU core cluster: efficiency | performance | prime cores.")
+        item("1.0|0.6|0.8 GHz", "current speed of each CPU core cluster, ordered from the slowest cluster to the fastest (e.g. efficiency | performance | prime).")
         item("RAM 8.6/11.0G 79%", "RAM in use / RAM usable by Android (part of the advertised RAM is reserved by the system).")
         item("App 1.30G", "RAM used by the app currently in front (resident memory).")
         item("Swap 4.5/12.0G 38%", "swap in use: compressed ZRAM + the storage \"memory extension\" (virtual RAM), combined. Not GPU memory.")

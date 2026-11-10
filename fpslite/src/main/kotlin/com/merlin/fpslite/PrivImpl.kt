@@ -139,8 +139,11 @@ class PrivImpl : PrivApi {
         startLocked()
     }
 
+    private var startedAt = 0L
+
     private fun startLocked(): Boolean {
         stopLocked()
+        startedAt = System.nanoTime()
         runProcess(listOf("sh", "-c", "pkill -f $TRACE_NAME"), 3) // stale session from a previous run
         File(TRACE).delete()
         val p = try {
@@ -185,6 +188,10 @@ class PrivImpl : PrivApi {
             return@synchronized longArrayOf(0, -1, -1, -1, 0)
         }
         try { readNewLocked() } catch (_: Throwable) {}
+        if (agg.events == 0 && System.nanoTime() - startedAt > 10_000_000_000L) {
+            // perfetto runs but the kernel has no GPU tracepoints (e.g. MT6765 / PowerVR).
+            return@synchronized longArrayOf(-1, -1, -1, -1, 0)
+        }
         val out = LongArray(2)
         agg.take(out)
         longArrayOf(if (agg.events > 0) 1 else 0, out[0], out[1], agg.lastFreqKHz, agg.events.toLong())
