@@ -1,0 +1,3 @@
+  Display: mDisplayId=0 stacks=7
+  mCurrentFocus=Window{73d5498 mode=0 rootTaskId=7878 u0 com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity}
+  mFocusedApp=ActivityRecord{184bc5d u0 com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity t7878}

@@ -318,4 +318,18 @@ class FpsCoreTest {
         assertEquals(null, m["SOC"])
         assertNotNull(m["CPU"]); assertNotNull(m["BATTERY"])
     }
+
+    @Test fun redmiTempleRunUsesAndroid11SurfaceViewLayer() {
+        val comp = LayerResolver.focusedComponent(res("redmi10a_window_focus_templerun.txt"))!!
+        assertEquals("com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity", comp)
+        val c = LayerResolver.candidates(res("redmi10a_sf_list_templerun.txt"), LayerResolver.packageOf(comp), comp)
+        assertEquals("SurfaceView - com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity#0", c[0])
+        assertTrue(c.none { it.startsWith("Background for") || it.startsWith("Bounds for") })
+        val p = LatencyParser()
+        val buf = LongArray(256)
+        val n = p.parse(res("redmi10a_latency_templerun.txt"), buf)
+        assertTrue("n=$n", n > 100)
+        val fps = (n - 1) * 1e9 / (buf[n - 1] - buf[0])
+        assertTrue("fps=$fps", fps in 55.0..62.0)
+    }
 }

@@ -1,0 +1,13 @@
+Root#0
+mWindowContainers#0
+DisplayArea.Root#0
+Leaf:0:1#0
+Leaf:2:2#0
+ActivityRecord{184bc5d u0 com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity t7878}#0
+73d5498 com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity#0
+Background for -SurfaceView - com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity#0
+SurfaceView - com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity#0
+com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity#0
+Bounds for - com.imangi.templerun/com.imangi.unityactivity.ImangiUnityActivity#0
+Leaf:3:14#0
+Leaf:17:35#0
