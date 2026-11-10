@@ -1,0 +1,3 @@
+  Display: mDisplayId=0 stacks=5
+  mCurrentFocus=Window{7a99e90 mode=0 rootTaskId=7871 u0 com.android.settings/com.android.settings.SubSettings}
+  mFocusedApp=ActivityRecord{cb53c14 u0 com.android.settings/.SubSettings t7871}

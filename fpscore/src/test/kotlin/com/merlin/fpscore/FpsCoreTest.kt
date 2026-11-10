@@ -289,4 +289,33 @@ class FpsCoreTest {
         val fps = (n - 1) * 1e9 / (buf[n - 1] - buf[0])
         assertTrue("fps=$fps", fps in 40.0..61.0)
     }
+
+    // ── Redmi 10A (MT6762 / Helio G25, Android 11) ───────────────────────────
+
+    @Test fun android11LatencyWithLayerNameLine() {
+        val p = LatencyParser()
+        val buf = LongArray(256)
+        p.parse(res("redmi10a_latency_settings.txt"), buf)
+        assertEquals(16_666_667L, p.refreshPeriodNs)
+    }
+
+    @Test fun layerNameWithDigitsIsNeverAFrameRow() {
+        val text = "16666667\nb1f402 SurfaceView[com.game2/com.game2.Main3]#0\n1000\t2000\t1500\n1100\t3000\t2500\n"
+        val out = LongArray(8)
+        val n = LatencyParser().parse(text, out)
+        assertEquals(2, n)
+        assertEquals(2000L, out[0])
+        assertEquals(3000L, out[1])
+    }
+
+    @Test fun redmiFocusWithModeAndRootTaskFields() {
+        assertEquals("com.android.settings/com.android.settings.SubSettings",
+            LayerResolver.focusedComponent(res("redmi10a_window_focus.txt")))
+    }
+
+    @Test fun redmiThermal() {
+        val m = ThermalParser.parse(res("redmi10a_thermalservice.txt"))
+        assertEquals(null, m["SOC"])
+        assertNotNull(m["CPU"]); assertNotNull(m["BATTERY"])
+    }
 }

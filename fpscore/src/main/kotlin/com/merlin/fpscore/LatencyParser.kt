@@ -12,6 +12,10 @@ package com.merlin.fpscore
  * that is what "FPS" means. Pending frames report INT64_MAX, empty slots report 0.
  * (Verified on HyperOS 3 / Android 16: column 3 is earlier than column 2, i.e. it
  * is the GPU-ready fence, not the present time.)
+ *
+ * Android 11 (e.g. Redmi 10A) prints the layer name on the line after the header.
+ * Only lines made of digits and whitespace are accepted, so a layer name that
+ * happens to contain numbers can never be mistaken for a frame row.
  */
 class LatencyParser {
     /** Refresh period from the header line, in ns (0 if absent). */
@@ -32,6 +36,7 @@ class LatencyParser {
             var nums = 0
             var a = 0L
             var b = 0L
+            var junk = false
             while (i < n && text[i] != '\n') {
                 val ch = text[i]
                 if (ch in '0'..'9') {
@@ -49,11 +54,12 @@ class LatencyParser {
                     }
                     nums++
                 } else {
+                    if (ch != ' ' && ch != '\t' && ch != '\r') junk = true
                     i++
                 }
             }
             i++ // skip '\n'
-            if (nums == 0) continue
+            if (nums == 0 || junk) continue
             if (!headerDone) {
                 headerDone = true
                 if (nums == 1) {
