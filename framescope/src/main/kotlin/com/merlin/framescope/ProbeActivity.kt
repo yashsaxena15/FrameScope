@@ -1,4 +1,4 @@
-package com.merlin.fpslite
+package com.merlin.framescope
 
 import android.app.Activity
 import android.content.ClipData
@@ -72,7 +72,7 @@ class ProbeActivity : Activity() {
     private fun report(gpu: Boolean): String {
         val sb = StringBuilder()
         fun h(t: String) = sb.append("\n== ").append(t).append(" ==\n")
-        sb.append("FPS Lite ").append(BuildConfig.VERSION_NAME).append(" device probe\n")
+        sb.append("FrameScope ").append(BuildConfig.VERSION_NAME).append(" device probe\n")
         h("Device")
         sb.append("model=").append(Build.MANUFACTURER).append(' ').append(Build.MODEL)
             .append(" device=").append(Build.DEVICE).append('\n')
@@ -167,7 +167,7 @@ class ProbeActivity : Activity() {
 
     private fun copy() {
         val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-        cm.setPrimaryClip(ClipData.newPlainText("FPS Lite probe", out.text))
+        cm.setPrimaryClip(ClipData.newPlainText("FrameScope probe", out.text))
         Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show()
     }
 

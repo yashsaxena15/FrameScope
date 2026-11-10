@@ -1,4 +1,4 @@
-package com.merlin.fpslite
+package com.merlin.framescope
 
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
@@ -241,7 +241,7 @@ class PrivImpl : PrivApi {
     override fun gpuLog(): String = log
 
     companion object {
-        private const val TRACE_NAME = "fpslite_gpu.pftrace"
+        private const val TRACE_NAME = "framescope_gpu.pftrace"
         private const val TRACE = "/data/misc/perfetto-traces/$TRACE_NAME"
 
         // Long-running ring buffer, flushed to file twice a second; the file is

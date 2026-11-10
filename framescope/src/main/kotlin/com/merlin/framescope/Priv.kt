@@ -1,4 +1,4 @@
-package com.merlin.fpslite
+package com.merlin.framescope
 
 import android.content.Context
 import android.content.pm.PackageManager

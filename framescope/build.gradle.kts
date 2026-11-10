@@ -8,11 +8,11 @@ plugins {
 val releaseKeystore: String? = System.getenv("FPS_KEYSTORE")
 
 android {
-    namespace = "com.merlin.fpslite"
+    namespace = "com.merlin.framescope"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.merlin.fpslite"
+        applicationId = "com.merlin.framescope"
         minSdk = 29
         targetSdk = 34
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1

@@ -1,4 +1,4 @@
-package com.merlin.fpslite
+package com.merlin.framescope
 
 import android.app.PendingIntent
 import android.content.Intent

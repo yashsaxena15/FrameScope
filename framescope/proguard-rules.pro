@@ -1,5 +1,5 @@
 # The privileged helper is started by class name via app_process.
--keep class com.merlin.fpslite.PrivMain {
+-keep class com.merlin.framescope.PrivMain {
     public static void main(java.lang.String[]);
 }
 

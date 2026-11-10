@@ -1,4 +1,4 @@
-package com.merlin.fpslite
+package com.merlin.framescope
 
 import java.io.DataInputStream
 import java.io.DataOutputStream

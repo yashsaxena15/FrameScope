@@ -1,9 +1,9 @@
-package com.merlin.fpslite
+package com.merlin.framescope
 
 import android.content.Context
 
 class Prefs(ctx: Context) {
-    private val sp = ctx.applicationContext.getSharedPreferences("fpslite", Context.MODE_PRIVATE)
+    private val sp = ctx.applicationContext.getSharedPreferences("framescope", Context.MODE_PRIVATE)
 
     var preset: Int
         get() = sp.getInt("preset", PRESET_STANDARD)

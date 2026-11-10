@@ -13,7 +13,7 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") }
     }
 }
-rootProject.name = "PerformanceMonitorPro"
+rootProject.name = "FrameScope"
 include(":app")
 include(":fpscore")
-include(":fpslite")
+include(":framescope")

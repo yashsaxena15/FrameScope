@@ -1,4 +1,4 @@
-package com.merlin.fpslite
+package com.merlin.framescope
 
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -13,7 +13,7 @@ import kotlin.system.exitProcess
 
 /**
  * Entry point of the privileged helper, started by the app through Shizuku as
- *   CLASSPATH=<our apk> app_process /system/bin com.merlin.fpslite.PrivMain
+ *   CLASSPATH=<our apk> app_process /system/bin com.merlin.framescope.PrivMain
  *
  * Why not Shizuku's UserService? On MediaTek firmware (e.g. Dimensity 9500s,
  * HyperOS 3) Shizuku 13.6's UserService starter crashes in a vendor-patched

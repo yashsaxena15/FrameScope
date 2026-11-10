@@ -1,4 +1,4 @@
-package com.merlin.fpslite
+package com.merlin.framescope
 
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -71,7 +71,7 @@ class OverlayService : Service() {
             if (Build.VERSION.SDK_INT >= 28) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
-            title = "FPS Lite"
+            title = "FrameScope"
         }
         applyTouchMode()
         attachDrag(v)
@@ -200,7 +200,7 @@ class OverlayService : Service() {
         )
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_fps)
-            .setContentTitle("FPS Lite overlay running")
+            .setContentTitle("FrameScope overlay running")
             .setContentText("Double-tap the overlay to reset stats")
             .setContentIntent(open)
             .setOngoing(true)
@@ -223,9 +223,9 @@ class OverlayService : Service() {
     companion object {
         private const val CHANNEL = "overlay"
         private const val NOTIF_ID = 1
-        const val ACTION_STOP = "com.merlin.fpslite.STOP"
-        const val ACTION_REFRESH = "com.merlin.fpslite.REFRESH"
-        const val ACTION_RESET = "com.merlin.fpslite.RESET"
+        const val ACTION_STOP = "com.merlin.framescope.STOP"
+        const val ACTION_REFRESH = "com.merlin.framescope.REFRESH"
+        const val ACTION_RESET = "com.merlin.framescope.RESET"
 
         @Volatile
         var running = false
