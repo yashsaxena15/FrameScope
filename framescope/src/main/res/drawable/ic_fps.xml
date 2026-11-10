@@ -1,6 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification + Quick Settings tile icon: white silhouette of the reticle, tuned for 24dp. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF"
-        android:pathData="M3,4h18a1,1 0,0 1,1 1v14a1,1 0,0 1,-1 1H3a1,1 0,0 1,-1 -1V5a1,1 0,0 1,1 -1zM4,6v12h16V6H4zM5,15l4,-4 3,3 5,-6 2,1.6 -7,8.2 -3,-3 -2.6,2.6z"/>
+    android:viewportWidth="66" android:viewportHeight="66">
+    <group android:translateX="-21" android:translateY="-21">
+        <path android:pathData="M30,54a24,24 0 1,0 48,0a24,24 0 1,0 -48,0"
+            android:strokeColor="#FFFFFFFF" android:strokeWidth="5.5" android:fillColor="#00000000" />
+        <path android:pathData="M54,22v9M54,77v9M22,54h9M77,54h9"
+            android:strokeColor="#FFFFFFFF" android:strokeWidth="5.5" android:strokeLineCap="round" />
+        <path android:pathData="M38,60L44,60L48,50L53,65L58,45L63,57L70,57"
+            android:strokeColor="#FFFFFFFF" android:strokeWidth="5.5"
+            android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    </group>
 </vector>

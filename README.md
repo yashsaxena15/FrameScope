@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="design/framescope-logo.svg" width="112" height="112" alt="FrameScope logo">
+
 # FrameScope
 
 **Accurate FPS, frame-time, CPU, RAM and temperature overlay for Android. No root required.**
