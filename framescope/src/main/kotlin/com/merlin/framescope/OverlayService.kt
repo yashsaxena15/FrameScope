@@ -93,6 +93,10 @@ class OverlayService : Service() {
                 sampler?.applyPrefs()
                 view?.applyPrefs()
                 applyTouchMode()
+                // Position is stored in prefs on every drag, so this only moves the
+                // overlay when something else (e.g. "Reset overlay position") changed it.
+                params.x = prefs.x
+                params.y = prefs.y
                 view?.let { if (it.isAttachedToWindow) wm.updateViewLayout(it, params) }
             }
         }

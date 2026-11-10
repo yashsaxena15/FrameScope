@@ -170,6 +170,19 @@ class MainActivity : Activity() {
         slider(root, "Current-FPS window", 250, 2000, prefs.fpsWindowMs, { "$it ms" }) { prefs.fpsWindowMs = it }
         check(root, "Lock position (touches pass through to the game)", prefs.locked) { prefs.locked = it }
         hint(root, "Double-tap the overlay (or use \"Reset stats\" in the notification) to reset jank and lows")
+        root.addView(Button(this).apply {
+            text = "Reset overlay position"
+            contentDescription = "Move the overlay back to the top-left corner"
+            setOnClickListener {
+                prefs.resetPosition()
+                changed()
+                android.widget.Toast.makeText(
+                    this@MainActivity,
+                    if (OverlayService.running) "Overlay moved to the top-left corner" else "Overlay will start in the top-left corner",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        })
 
         section(root, "Diagnostics")
         root.addView(Button(this).apply {

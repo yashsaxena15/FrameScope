@@ -58,11 +58,11 @@ class Prefs(ctx: Context) {
         set(v) = sp.edit().putInt("bgAlpha", v).apply()
 
     var x: Int
-        get() = sp.getInt("x", 24)
+        get() = sp.getInt("x", DEFAULT_X)
         set(v) = sp.edit().putInt("x", v).apply()
 
     var y: Int
-        get() = sp.getInt("y", 160)
+        get() = sp.getInt("y", DEFAULT_Y)
         set(v) = sp.edit().putInt("y", v).apply()
 
     /** Locked overlays ignore touches (they pass through to the game). */
@@ -72,7 +72,14 @@ class Prefs(ctx: Context) {
 
     val wantsExtras: Boolean get() = preset == PRESET_FULL
 
+    /** Moves the overlay back to its default spot (top-left, below the status bar). */
+    fun resetPosition() {
+        sp.edit().putInt("x", DEFAULT_X).putInt("y", DEFAULT_Y).apply()
+    }
+
     companion object {
+        const val DEFAULT_X = 24
+        const val DEFAULT_Y = 160
         const val PRESET_MINIMAL = 0
         const val PRESET_STANDARD = 1
         const val PRESET_FULL = 2

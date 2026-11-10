@@ -53,7 +53,7 @@ class HelpActivity : Activity() {
 
         section("Tips")
         item("Double-tap", "the overlay to reset jank and the avg / 1% / 0.1% lows — e.g. when a match starts.")
-        item("Drag", "the overlay to move it. \"Lock position\" makes it ignore touches so they reach the game.")
+        item("Drag", "the overlay to move it. \"Lock position\" makes it ignore touches so they reach the game. If it ends up off-screen or hard to reach, use \"Reset overlay position\" in settings.")
         item("Notification", "has Reset stats and Stop buttons. A Quick Settings tile can toggle the overlay.")
 
         val d = resources.displayMetrics.density
