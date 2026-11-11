@@ -143,3 +143,31 @@ class MemInfo {
         }
     }
 }
+
+/**
+ * Mean of the samples added since the last [take]. Used to smooth values that
+ * the hardware changes many times per second: e.g. a Mali GPU's DVFS jumps to
+ * ~1000 MHz and steps down to ~300 MHz within about 1.5 s, so one reading per
+ * second lands on a random point of that cycle.
+ */
+class RunningMean {
+    private var sum = 0.0
+    private var n = 0
+
+    /** Adds a sample; negative values mean "no reading" and are ignored. */
+    fun add(v: Double) {
+        if (v < 0 || v.isNaN()) return
+        sum += v
+        n++
+    }
+
+    val count: Int get() = n
+
+    /** Returns the mean (or -1 if there were no samples) and resets. */
+    fun take(): Double {
+        val r = if (n > 0) sum / n else -1.0
+        sum = 0.0
+        n = 0
+        return r
+    }
+}

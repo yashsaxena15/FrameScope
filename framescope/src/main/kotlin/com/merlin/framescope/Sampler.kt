@@ -16,6 +16,7 @@ import com.merlin.fpscore.LatencyParser
 import com.merlin.fpscore.LayerChooser
 import com.merlin.fpscore.LayerResolver
 import com.merlin.fpscore.MemInfo
+import com.merlin.fpscore.RunningMean
 import com.merlin.fpscore.ThermalParser
 import com.merlin.fpscore.ThermalZones
 
@@ -118,6 +119,11 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private var gpuFreqPath: String? = null
     private var socZonePaths: Array<String> = emptyArray()
     private var batteryZonePath: String? = null
+
+    // Fast-changing values are read on every tick and shown as a 1-second mean.
+    private val gpuLoadMean = RunningMean()
+    private val gpuFreqMean = RunningMean()
+    private val clusterMeans = Array(Snapshot.MAX_CLUSTERS) { RunningMean() }
     private var cpuPaths: Array<String> = emptyArray()
 
     private var pollMs = 250L
@@ -273,6 +279,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             work.frameTimeMs = if (work.graphN > 0) work.graph[work.graphN - 1] else 0f
         }
 
+        sampleFast(svc)
         if (wantCpu && now >= nextCpuAt) {
             nextCpuAt = now + 1000
             sampleCpu(svc)
@@ -374,8 +381,10 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         val nClusters = clusterPaths!!.size
         var k = 0
         for (i in 0 until nClusters) {
-            val v = res.getOrNull(i)?.trim()?.toLongOrNull() ?: continue
-            work.clusterMHz[k++] = (v / 1000).toInt()
+            res.getOrNull(i)?.trim()?.toLongOrNull()?.let { clusterMeans[i].add(it.toDouble()) }
+            val mean = clusterMeans[i].take()
+            if (mean < 0) continue
+            work.clusterMHz[k++] = (mean / 1000).toInt()
         }
         work.clusters = k
         val stat = res.getOrNull(nClusters)
@@ -392,6 +401,31 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             if (hw > 0 && lim < hw * 98 / 100) capped = true
         }
         work.cpuCapped = capped
+    }
+
+    /**
+     * Every tick (default 250 ms): one batched read of the GPU driver nodes and
+     * CPU cluster frequencies, accumulated into 1-second means. GPU DVFS on Mali
+     * sweeps ~300→1000 MHz within ~1.5 s, so single readings jump around.
+     */
+    private fun sampleFast(svc: PrivApi) {
+        val gpu = wantGpu && sourcesProbed && (gpuLoadPath != null || gpuFreqPath != null)
+        val cl = if (wantCpu && prefs.showCpuFreq) clusterPaths else null
+        if (!gpu && cl == null) return
+        val paths = ArrayList<String>(2 + (cl?.size ?: 0))
+        if (gpu) { paths.add(gpuLoadPath ?: ""); paths.add(gpuFreqPath ?: "") }
+        cl?.let { paths.addAll(it) }
+        val r = svc.readTexts(paths.toTypedArray())
+        var o = 0
+        if (gpu) { addGpuSample(r, 0); o = 2 }
+        if (cl != null) for (i in cl.indices) {
+            r.getOrNull(o + i)?.trim()?.toLongOrNull()?.let { clusterMeans[i].add(it.toDouble()) }
+        }
+    }
+
+    private fun addGpuSample(r: Array<String?>, offset: Int) {
+        gpuLoadPath?.let { p -> r.getOrNull(offset)?.let { gpuLoadMean.add(GpuSysfs.parseLoad(p, it).toDouble()) } }
+        gpuFreqPath?.let { p -> r.getOrNull(offset + 1)?.let { gpuFreqMean.add(GpuSysfs.parseFreqMHz(p, it).toDouble()) } }
     }
 
     /**
@@ -464,11 +498,11 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         val lp = gpuLoadPath
         val fp = gpuFreqPath
         if (lp != null || fp != null) {
-            val r = svc.readTexts(arrayOf(lp ?: "", fp ?: ""))
-            val load = if (lp != null) r.getOrNull(0)?.let { GpuSysfs.parseLoad(lp, it) } ?: -1 else -1
-            val mhz = if (fp != null) r.getOrNull(1)?.let { GpuSysfs.parseFreqMHz(fp, it) } ?: -1 else -1
+            if (gpuLoadMean.count == 0 && gpuFreqMean.count == 0) addGpuSample(svc.readTexts(arrayOf(lp ?: "", fp ?: "")), 0)
+            val load = gpuLoadMean.take()
+            val mhz = gpuFreqMean.take()
             work.gpuBusy = if (load >= 0) load.toFloat() else -1f
-            work.gpuMHz = mhz
+            work.gpuMHz = if (mhz > 0) (mhz + 0.5).toInt() else -1
             work.gpuState = 1
             work.gpuAccurate = true
             return

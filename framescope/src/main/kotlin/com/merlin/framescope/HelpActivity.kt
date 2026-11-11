@@ -50,7 +50,7 @@ class HelpActivity : Activity() {
         item("SoC 55°", "chip temperature from Android's thermal service (the value the phone uses for throttling). Many phones, including HyperOS, report one chip-wide value, so CPU and GPU are not shown separately.")
         item("Bat 42°", "battery temperature.")
         item("▼", "after the CPU speeds: a cluster's maximum frequency is currently limited, usually by heat or a power mode (throttling).")
-        item("GPU", "GPU load and frequency from the GPU driver. Needs root (or a phone that exposes these files); then it is accurate.")
+        item("GPU", "GPU load and frequency from the GPU driver, averaged over the last second (the GPU changes its clock many times per second). Needs root, or a phone that exposes these files; then it is accurate.")
         item("GPU*", "without root: experimental GPU values from kernel trace events; not accurate on MediaTek chips.")
         item("Root", "with root, SoC temperature comes from the real chip sensors (the hottest one), and GPU values from the driver.")
 

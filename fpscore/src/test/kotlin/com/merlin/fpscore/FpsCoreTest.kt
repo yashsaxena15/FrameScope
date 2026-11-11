@@ -402,4 +402,15 @@ class FpsCoreTest {
         assertEquals(zones.first { it.type == "mtktsbattery" }.celsius, ThermalZones.batteryTemp(zones), 0.01f)
         assertTrue(zones.none { it.type == "mtktspmic" && ThermalZones.isSocZone(it.type) })
     }
+
+    @Test fun runningMeanSmoothsMaliDvfsSawtooth() {
+        // One second of real 10 Hz samples from the Redmi Note 9 in Asphalt 8.
+        val freq = intArrayOf(299, 299, 315, 349, 332, 975, 950, 900, 875, 823)
+        val m = RunningMean()
+        for (f in freq) m.add(f.toDouble())
+        m.add(-1.0) // missing reading is ignored
+        assertEquals(10, m.count)
+        assertEquals(611.7, m.take(), 0.1)
+        assertEquals(-1.0, m.take(), 0.0) // reset after take
+    }
 }
