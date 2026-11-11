@@ -29,11 +29,15 @@ uses almost no memory or CPU, and has **no internet permission**.
 - **CPU.** Total load, plus the current frequency of each core cluster, ordered slowest to fastest.
 - **Memory.** System RAM used / usable, the RAM of the app in front, and optional swap (ZRAM + memory extension).
 - **Temperatures.** SoC and battery, from Android's thermal service.
-- **Four presets:**
+- **Five overlay styles:**
   - **Minimal:** FPS only.
+  - **Pill:** a slim pill with colored FPS, a mini frame-time line, CPU, GPU (with root), RAM and temperature.
   - **Compact:** one line with FPS, CPU %, GPU % (with root), RAM % and SoC temperature.
   - **Standard:** FPS stats + graph.
   - **Full:** Standard + CPU, RAM and temperatures.
+- **Color by smoothness.** FPS turns green, amber or red against its target; temperature turns amber or red when the chip is hot or throttled.
+- **Guided setup** on first launch, and a home screen with a live preview and one-tap fixes when something is missing.
+- **Snap to edges.** The overlay snaps to screen edges, stays clear of the notch, and remembers portrait and landscape positions separately.
 - **Made for gaming.** Drag to position, lock to let touches pass through, adjustable size and opacity. **Double-tap to reset stats** at the start of a match.
 - **Quick Settings tile**, notification controls, and a built-in **?** help screen.
 - **Lightweight.** About a 140 KB APK, no Compose, AppCompat or analytics, and a Canvas-drawn overlay that allocates nothing per frame.

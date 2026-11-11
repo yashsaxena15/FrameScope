@@ -57,13 +57,30 @@ class Prefs(ctx: Context) {
         get() = sp.getInt("bgAlpha", 150)
         set(v) = sp.edit().putInt("bgAlpha", v).apply()
 
-    var x: Int
-        get() = sp.getInt("x", DEFAULT_X)
-        set(v) = sp.edit().putInt("x", v).apply()
+    /** Overlay position, remembered separately for portrait and landscape. */
+    fun posX(landscape: Boolean): Int = sp.getInt(if (landscape) "xl" else "x", DEFAULT_X)
+    fun posY(landscape: Boolean): Int = sp.getInt(if (landscape) "yl" else "y", DEFAULT_Y)
+    fun setPos(landscape: Boolean, x: Int, y: Int) {
+        sp.edit().putInt(if (landscape) "xl" else "x", x).putInt(if (landscape) "yl" else "y", y).apply()
+    }
 
-    var y: Int
-        get() = sp.getInt("y", DEFAULT_Y)
-        set(v) = sp.edit().putInt("y", v).apply()
+    /** FPS turns green / amber / red by smoothness; temperature amber / red when hot. */
+    var colorize: Boolean
+        get() = sp.getBoolean("colorize", true)
+        set(v) = sp.edit().putBoolean("colorize", v).apply()
+
+    /** Dropped overlays snap to the left / right / top / bottom edge or the centre when close. */
+    var snapEdges: Boolean
+        get() = sp.getBoolean("snapEdges", true)
+        set(v) = sp.edit().putBoolean("snapEdges", v).apply()
+
+    /** First-run setup guide finished or skipped. */
+    var setupDone: Boolean
+        get() = sp.getBoolean("setupDone", false)
+        set(v) = sp.edit().putBoolean("setupDone", v).apply()
+
+    /** True when settings already exist (an install from before the setup guide). */
+    val isExistingInstall: Boolean get() = sp.all.isNotEmpty()
 
     /** How the privileged helper is started: [ACCESS_AUTO], [ACCESS_SHIZUKU] or [ACCESS_ROOT]. */
     var access: Int
@@ -79,7 +96,7 @@ class Prefs(ctx: Context) {
 
     /** Moves the overlay back to its default spot (top-left, below the status bar). */
     fun resetPosition() {
-        sp.edit().putInt("x", DEFAULT_X).putInt("y", DEFAULT_Y).apply()
+        sp.edit().remove("x").remove("y").remove("xl").remove("yl").apply()
     }
 
     companion object {
@@ -94,5 +111,10 @@ class Prefs(ctx: Context) {
         const val PRESET_FULL = 2
         /** One line: FPS · CPU % · RAM % · SoC °C. (Value 3 keeps stored presets stable.) */
         const val PRESET_COMPACT = 3
+        /** Rounded pill: colored FPS, mini frame-time line, CPU / GPU / RAM %, temperature. */
+        const val PRESET_PILL = 4
+
+        /** One-line presets share the same data needs (system RAM %, driver-only GPU). */
+        fun isOneLine(preset: Int) = preset == PRESET_COMPACT || preset == PRESET_PILL
     }
 }

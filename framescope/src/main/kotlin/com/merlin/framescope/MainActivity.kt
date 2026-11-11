@@ -4,39 +4,55 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Typeface
-import android.net.Uri
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.CheckBox
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.RadioGroup
 import android.widget.ScrollView
-import android.widget.SeekBar
 import android.widget.TextView
 
-/** Settings screen built in code with platform widgets only (no AppCompat/Compose). */
+/**
+ * Home screen ("Control Center"): connection status with one-tap fixes, a
+ * preview of the overlay, a big Start/Stop button and the overlay styles.
+ * Detailed options live in [SettingsActivity]. Platform widgets only.
+ */
 class MainActivity : Activity() {
     private lateinit var prefs: Prefs
-    private lateinit var shizukuStatus: TextView
-    private lateinit var shizukuButton: Button
-    private lateinit var overlayStatus: TextView
-    private lateinit var overlayButton: Button
-    private lateinit var toggle: Button
+    private lateinit var ui: Ui
+    private lateinit var chip: TextView
+    private lateinit var fixCard: LinearLayout
+    private lateinit var fixText: TextView
+    private lateinit var fixPrimary: TextView
+    private lateinit var fixSecondary: TextView
+    private lateinit var startBtn: TextView
+    private lateinit var preview: OverlayView
+    private lateinit var demo: DemoSource
+    private val styleCards = ArrayList<Pair<Int, LinearLayout>>()
     private val privListener = Runnable { refreshStatus() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
+        ui = Ui(this)
         Priv.init(this)
+
+        // First launch: guided setup. Installs that already have settings skip it.
+        if (!prefs.setupDone) {
+            if (prefs.isExistingInstall) prefs.setupDone = true
+            else startActivity(Intent(this, SetupActivity::class.java))
+        }
+
+        @Suppress("DEPRECATION")
+        demo = DemoSource(windowManager.defaultDisplay.refreshRate)
         setContentView(buildUi())
-        if (Build.VERSION.SDK_INT >= 33 &&
+
+        if (prefs.setupDone && Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
@@ -47,6 +63,8 @@ class MainActivity : Activity() {
         super.onResume()
         Priv.addListener(privListener)
         Priv.ensureBound()
+        preview.applyPrefs() // settings may have changed on another screen
+        updateStyleCards()
         refreshStatus()
     }
 
@@ -55,176 +73,179 @@ class MainActivity : Activity() {
         super.onPause()
     }
 
+    // ── status ───────────────────────────────────────────────────────────────
+
     private fun refreshStatus() {
         val st = Priv.state()
-        shizukuStatus.text = when (st) {
-            Priv.State.READY -> when {
-                Priv.via == Priv.Via.ROOT -> "Connected via root ✓"
-                Priv.isRoot -> "Connected via Shizuku (root) ✓"
-                else -> "Connected via Shizuku ✓"
-            }
-            Priv.State.CONNECTING -> "Connecting… (grant the superuser prompt if one appears)"
-            Priv.State.NO_PERMISSION -> "Shizuku: permission needed"
-            Priv.State.NO_SHIZUKU -> "Shizuku: not running — start it in the Shizuku app (or use a rooted phone)"
-            Priv.State.NO_ROOT -> "Root: no su binary found on this phone"
-            Priv.State.FAILED -> "Helper failed — ${Priv.lastError ?: "unknown error"}"
-        }
-        shizukuButton.visibility = if (st == Priv.State.NO_PERMISSION) View.VISIBLE else View.GONE
         val canDraw = Settings.canDrawOverlays(this)
-        overlayStatus.text = if (canDraw) "Overlay permission: granted ✓" else "Overlay permission: needed"
-        overlayButton.visibility = if (canDraw) View.GONE else View.VISIBLE
-        toggle.text = if (OverlayService.running) "Stop overlay" else "Start overlay"
-        toggle.isEnabled = canDraw
+
+        when (st) {
+            Priv.State.READY -> ui.setChip(chip, if (Priv.isRoot) "Root ✓" else "Shizuku ✓", ui.good, ui.goodSoft)
+            Priv.State.CONNECTING -> ui.setChip(chip, "Connecting…", ui.accent, ui.accentSoft)
+            else -> ui.setChip(chip, "Setup needed", ui.warn, ui.warnSoft)
+        }
+
+        // One problem at a time, each with the button that fixes it.
+        when {
+            st == Priv.State.NO_PERMISSION -> showFix(
+                "Shizuku is running, but FrameScope isn't allowed to use it yet.",
+                "Grant permission", { Priv.requestPermission() }
+            )
+            st == Priv.State.NO_SHIZUKU -> {
+                val installed = Ui.shizukuInstalled(this)
+                val hasRoot = Priv.suPath() != null
+                showFix(
+                    if (installed) "Shizuku isn't running. Start it in the Shizuku app, then come back."
+                    else "FrameScope needs Shizuku or root to read frame data.",
+                    if (installed) "Open Shizuku" else "Get Shizuku", { Ui.openShizuku(this) },
+                    if (hasRoot) "Use root instead" else null,
+                    { prefs.access = Prefs.ACCESS_ROOT; Priv.ensureBound(); refreshStatus() }
+                )
+            }
+            st == Priv.State.NO_ROOT -> showFix(
+                "Root access isn't available on this phone.",
+                "Use Shizuku", { prefs.access = Prefs.ACCESS_AUTO; Priv.ensureBound(); refreshStatus() }
+            )
+            st == Priv.State.FAILED -> showFix(
+                "Couldn't start the helper: ${Priv.lastError ?: "unknown error"}",
+                "Try again", { Priv.shutdown(); Priv.ensureBound(); refreshStatus() }
+            )
+            !canDraw -> showFix(
+                "FrameScope needs permission to draw over other apps.",
+                "Allow", { Ui.openOverlayPermission(this) }
+            )
+            else -> fixCard.visibility = View.GONE
+        }
+
+        val running = OverlayService.running
+        startBtn.text = if (running) "■   Stop overlay" else "▶   Start overlay"
+        startBtn.background = ui.rounded(if (running) ui.danger else ui.accent, 14)
+        startBtn.setTextColor(if (running) 0xFFFFFFFF.toInt() else ui.onAccent)
+        startBtn.isEnabled = canDraw
+        startBtn.alpha = if (canDraw) 1f else 0.45f
+
+        // The preview shows the GPU segment only when this phone can read it accurately.
+        synchronized(demo.lock) { demo.shared.gpuAccurate = st == Priv.State.READY && Priv.isRoot }
+        preview.invalidate()
+    }
+
+    private fun showFix(
+        message: String, primary: String, onPrimary: () -> Unit,
+        secondary: String? = null, onSecondary: (() -> Unit)? = null
+    ) {
+        fixCard.visibility = View.VISIBLE
+        fixText.text = message
+        fixPrimary.text = primary
+        fixPrimary.setOnClickListener { onPrimary() }
+        if (secondary != null && onSecondary != null) {
+            fixSecondary.visibility = View.VISIBLE
+            fixSecondary.text = secondary
+            fixSecondary.setOnClickListener { onSecondary() }
+        } else {
+            fixSecondary.visibility = View.GONE
+        }
     }
 
     // ── UI ───────────────────────────────────────────────────────────────────
 
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
-
     private fun buildUi(): View {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(24), dp(20), dp(24))
-        }
+        val root = ui.column(16)
+
+        // Header: icon, name, status chip, help
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        header.addView(TextView(this).apply {
-            text = "FrameScope"
-            textSize = 26f
-            typeface = Typeface.DEFAULT_BOLD
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        header.addView(Button(this).apply {
-            text = "?"
-            textSize = 18f
+        header.addView(ImageView(this).apply { setImageResource(R.mipmap.ic_launcher) },
+            LinearLayout.LayoutParams(ui.dp(40), ui.dp(40)))
+        header.addView(ui.text("FrameScope", 22f, bold = true).apply { setPadding(ui.dp(10), 0, 0, 0) },
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        chip = ui.chip()
+        header.addView(chip)
+        header.addView(ui.text("?", 18f, bold = true).apply {
+            gravity = Gravity.CENTER
             contentDescription = "Help: what each overlay value means"
+            background = ui.rounded(0x00000000, 99, ui.stroke)
+            isClickable = true
+            isFocusable = true
             setOnClickListener { startActivity(Intent(this@MainActivity, HelpActivity::class.java)) }
-        }, LinearLayout.LayoutParams(dp(56), dp(56)))
+        }, LinearLayout.LayoutParams(ui.dp(40), ui.dp(40)).apply { leftMargin = ui.dp(8) })
         root.addView(header)
-        root.addView(TextView(this).apply {
-            text = "Lightweight FPS / CPU / GPU overlay via Shizuku"
-            alpha = 0.7f
-        })
 
-        section(root, "Setup")
-        shizukuStatus = TextView(this)
-        root.addView(shizukuStatus)
-        shizukuButton = Button(this).apply {
-            text = "Grant Shizuku permission"
-            setOnClickListener { Priv.requestPermission() }
-        }
-        root.addView(shizukuButton)
-        overlayStatus = TextView(this)
-        root.addView(overlayStatus)
-        overlayButton = Button(this).apply {
-            text = "Allow display over other apps"
-            setOnClickListener {
-                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
-            }
-        }
-        root.addView(overlayButton)
+        // Status card with fix buttons (hidden when everything is ready)
+        fixCard = ui.column(14).apply { background = ui.rounded(ui.warnSoft, 14) }
+        fixText = ui.text("", 14f)
+        fixCard.addView(fixText)
+        fixPrimary = ui.button("")
+        fixCard.addView(fixPrimary, ui.lp(10))
+        fixSecondary = ui.outlineButton("")
+        fixCard.addView(fixSecondary, ui.lp(8))
+        root.addView(fixCard, ui.lp(14))
 
-        root.addView(TextView(this).apply {
-            text = "Access method"
-            alpha = 0.7f
-            setPadding(0, dp(10), 0, 0)
-        })
-        val accessGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        arrayOf(
-            Prefs.ACCESS_AUTO to "Auto — Shizuku if granted, otherwise root",
-            Prefs.ACCESS_SHIZUKU to "Shizuku only",
-            Prefs.ACCESS_ROOT to "Root only (su) — adds accurate GPU and real sensors"
-        ).forEach { (v, label) ->
-            accessGroup.addView(RadioButton(this).apply { id = 200 + v; text = label })
+        // Preview of the overlay on a game-like backdrop
+        val previewCard = ui.cardColumn()
+        previewCard.addView(ui.label("Preview · sample values"))
+        val stage = FrameLayout(this).apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0xFF27527A.toInt(), 0xFF6E9CBB.toInt(), 0xFF4F5F3C.toInt(), 0xFF2C3524.toInt())
+            ).apply { cornerRadius = ui.dp(10).toFloat() }
+            setPadding(ui.dp(10), ui.dp(10), ui.dp(10), ui.dp(10))
+            minimumHeight = ui.dp(96)
+            clipChildren = true
         }
-        accessGroup.check(200 + prefs.access)
-        accessGroup.setOnCheckedChangeListener { _, id ->
-            prefs.access = id - 200
-            // Restart the helper with the new method.
-            val wasRunning = OverlayService.running
-            Priv.shutdown()
-            Priv.ensureBound()
-            if (wasRunning) OverlayService.refresh(this)
-            refreshStatus()
-        }
-        root.addView(accessGroup)
+        preview = OverlayView(this, demo, prefs)
+        stage.addView(preview, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        previewCard.addView(stage, ui.lp(8))
+        root.addView(previewCard, ui.lp(14))
 
-        toggle = Button(this).apply {
-            textSize = 18f
+        // Start / stop
+        startBtn = ui.button("", sizeSp = 17f).apply {
+            minHeight = ui.dp(56)
             setOnClickListener {
                 if (OverlayService.running) OverlayService.stop(this@MainActivity)
                 else OverlayService.start(this@MainActivity)
-                postDelayed({ refreshStatus() }, 300)
+                postDelayed({ refreshStatus() }, 350)
             }
         }
-        root.addView(toggle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)).apply {
-            topMargin = dp(12)
-        })
+        root.addView(startBtn, ui.lp(14))
 
-        section(root, "Overlay")
-        val group = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        // Display order; ids are 100 + the stored preset value.
-        val presets = arrayOf(
-            Prefs.PRESET_MINIMAL to "Minimal — FPS number only",
-            Prefs.PRESET_COMPACT to "Compact — FPS, CPU %, GPU % (with root), RAM %, SoC temperature in one line",
-            Prefs.PRESET_STANDARD to "Standard — FPS, avg, 1%/0.1% low, frame-time graph",
-            Prefs.PRESET_FULL to "Full — Standard + CPU, RAM, temperatures"
-        )
-        presets.forEach { (value, n) ->
-            group.addView(RadioButton(this).apply {
-                id = 100 + value
-                text = n
-            })
-        }
-        group.check(100 + prefs.preset)
-        group.setOnCheckedChangeListener { _, id ->
-            prefs.preset = id - 100
-            changed()
-        }
-        root.addView(group)
-
-        section(root, "Full preset metrics")
-        check(root, "CPU load", prefs.showCpuLoad) { prefs.showCpuLoad = it }
-        check(root, "CPU frequency per core cluster", prefs.showCpuFreq) { prefs.showCpuFreq = it }
-        hint(root, "Shown per core cluster from slowest to fastest, in GHz (e.g. 1.0|0.6|0.8 GHz)")
-        check(root, "RAM usage (system + current app)", prefs.showRam) { prefs.showRam = it }
-        check(root, "Swap (ZRAM + memory extension / virtual RAM)", prefs.showSwap) { prefs.showSwap = it }
-        check(root, "GPU load + frequency (accurate with root; experimental without)", prefs.showGpu) { prefs.showGpu = it }
-        check(root, "Temperatures (SoC / battery)", prefs.showTemps) { prefs.showTemps = it }
-
-        section(root, "Appearance & sampling")
-        slider(root, "Text size", 60, 200, (prefs.textScale * 100).toInt(), { "${it}%" }) { prefs.textScale = it / 100f }
-        slider(root, "Background opacity", 0, 255, prefs.bgAlpha, { "${it * 100 / 255}%" }) { prefs.bgAlpha = it }
-        slider(root, "FPS poll interval", 100, 500, prefs.pollMs, { "$it ms" }) { prefs.pollMs = it }
-        slider(root, "Current-FPS window", 250, 2000, prefs.fpsWindowMs, { "$it ms" }) { prefs.fpsWindowMs = it }
-        check(root, "Lock position (touches pass through to the game)", prefs.locked) { prefs.locked = it }
-        hint(root, "Double-tap the overlay (or use \"Reset stats\" in the notification) to reset jank and lows")
-        root.addView(Button(this).apply {
-            text = "Reset overlay position"
-            contentDescription = "Move the overlay back to the top-left corner"
-            setOnClickListener {
-                prefs.resetPosition()
-                changed()
-                android.widget.Toast.makeText(
-                    this@MainActivity,
-                    if (OverlayService.running) "Overlay moved to the top-left corner" else "Overlay will start in the top-left corner",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
+        // Overlay styles, two per row
+        root.addView(ui.label("Overlay style"), ui.lp(20))
+        Ui.STYLES.toList().chunked(2).forEach { pair ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            pair.forEachIndexed { i, (value, name, desc) ->
+                val c = ui.column(12).apply {
+                    isClickable = true
+                    isFocusable = true
+                    contentDescription = "$name overlay style: $desc"
+                    addView(ui.text(name, 15f, bold = true))
+                    addView(ui.text(desc, 12f, ui.muted))
+                    setOnClickListener {
+                        prefs.preset = value
+                        updateStyleCards()
+                        preview.applyPrefs()
+                        OverlayService.refresh(this@MainActivity)
+                    }
+                }
+                styleCards.add(value to c)
+                row.addView(c, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
+                    if (i > 0) leftMargin = ui.dp(8)
+                })
             }
-        })
+            if (pair.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f).apply { leftMargin = ui.dp(8) })
+            root.addView(row, ui.lp(8))
+        }
 
-        section(root, "Diagnostics")
-        root.addView(Button(this).apply {
-            text = "Device probe"
-            setOnClickListener { startActivity(Intent(this@MainActivity, ProbeActivity::class.java)) }
-        })
-        root.addView(TextView(this).apply {
-            text = "Version ${BuildConfig.VERSION_NAME}"
-            alpha = 0.5f
+        root.addView(ui.outlineButton("Customize  ›").apply {
+            contentDescription = "Customize: metrics, appearance, access method and diagnostics"
+            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }
+        }, ui.lp(16))
+
+        root.addView(ui.text("Double-tap the overlay to reset stats · drag to move", 12f, ui.muted).apply {
             gravity = Gravity.CENTER
-            setPadding(0, dp(16), 0, 0)
-        })
+        }, ui.lp(14))
 
         return ScrollView(this).apply {
             isFillViewport = true
@@ -233,54 +254,12 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun changed() = OverlayService.refresh(this)
-
-    private fun section(root: LinearLayout, title: String) {
-        root.addView(TextView(this).apply {
-            text = title
-            textSize = 15f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, dp(20), 0, dp(6))
-        })
-    }
-
-    private fun hint(root: LinearLayout, text: String) {
-        root.addView(TextView(this).apply {
-            this.text = text
-            textSize = 12f
-            alpha = 0.6f
-            setPadding(dp(32), 0, 0, dp(4))
-        })
-    }
-
-    private fun check(root: LinearLayout, label: String, value: Boolean, set: (Boolean) -> Unit) {
-        root.addView(CheckBox(this).apply {
-            text = label
-            isChecked = value
-            setOnCheckedChangeListener { _, c -> set(c); changed() }
-        })
-    }
-
-    private fun slider(
-        root: LinearLayout, label: String, min: Int, max: Int, value: Int,
-        fmt: (Int) -> String, set: (Int) -> Unit
-    ) {
-        val tv = TextView(this).apply { text = "$label: ${fmt(value)}" }
-        root.addView(tv)
-        root.addView(SeekBar(this).apply {
-            this.min = min
-            this.max = max
-            progress = value.coerceIn(min, max)
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
-                    tv.text = "$label: ${fmt(p)}"
-                }
-                override fun onStartTrackingTouch(s: SeekBar?) {}
-                override fun onStopTrackingTouch(s: SeekBar?) {
-                    set(s?.progress ?: value)
-                    changed()
-                }
-            })
-        })
+    private fun updateStyleCards() {
+        val current = prefs.preset
+        for ((value, card) in styleCards) {
+            val on = value == current
+            card.background = ui.rounded(if (on) ui.accentSoft else ui.card, 12, if (on) ui.accent else ui.stroke, if (on) 2 else 1)
+            card.isSelected = on
+        }
     }
 }

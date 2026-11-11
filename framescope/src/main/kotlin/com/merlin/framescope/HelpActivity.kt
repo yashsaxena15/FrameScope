@@ -38,6 +38,13 @@ class HelpActivity : Activity() {
         item("gap", "only shown if the overlay missed frames because polling was too slow (lower the poll interval).")
         item("Graph", "time of each of the last 120 frames; spikes are slow frames. The green line is one screen refresh.")
 
+        section("Colors")
+        item("Green / amber / red FPS", "how close the game is to its target: the screen's refresh rate, or a lower cap such as 30 FPS when the game clearly runs at one. Green is 90 % or more of the target, amber 70–90 %, red below.")
+        item("Amber / red temperature", "the chip is hot (70 °C or more) or being throttled; red from 85 °C. Turn colors off in Customize.")
+
+        section("Pill style")
+        item("60 ⌇ CPU 23% GPU 45% RAM 79% 42°", "colored FPS, a mini line of the latest frame times (spikes are slow frames), CPU, GPU (when it can be read accurately), RAM and SoC temperature.")
+
         section("Compact preset")
         item("60 FPS · CPU 23% · GPU 45% · RAM 79% · 42°", "frames per second, total CPU usage, GPU usage, RAM used by the whole device, and SoC temperature, in one line. GPU appears only when FrameScope can read it from the GPU driver (root, or phones that allow it), because the alternative is not accurate.")
 
@@ -56,6 +63,7 @@ class HelpActivity : Activity() {
 
         section("Tips")
         item("Double-tap", "the overlay to reset jank and the avg / 1% / 0.1% lows — e.g. when a match starts.")
+        item("Snap", "when you drop the overlay near an edge or the centre it jumps there, and it always stays on screen. Portrait and landscape positions are remembered separately.")
         item("Drag", "the overlay to move it. \"Lock position\" makes it ignore touches so they reach the game. If it ends up off-screen or hard to reach, use \"Reset overlay position\" in settings.")
         item("Notification", "has Reset stats and Stop buttons. A Quick Settings tile can toggle the overlay.")
 

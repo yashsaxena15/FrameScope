@@ -413,4 +413,28 @@ class FpsCoreTest {
         assertEquals(611.7, m.take(), 0.1)
         assertEquals(-1.0, m.take(), 0.0) // reset after take
     }
+
+    // ── Color by smoothness ──────────────────────────────────────────────────
+
+    @Test fun smoothnessTargetsRefreshOrAClearLowerCap() {
+        assertEquals(60f, Smoothness.targetFps(59f, 60f), 0.01f)
+        assertEquals(30f, Smoothness.targetFps(29.5f, 60f), 0.01f)   // 30 FPS game (Asphalt 8 menu)
+        assertEquals(60f, Smoothness.targetFps(47.8f, 60f), 0.01f)   // struggling, not a "cap"
+        assertEquals(90f, Smoothness.targetFps(88f, 120f), 0.01f)
+        assertEquals(120f, Smoothness.targetFps(118f, 120f), 0.01f)
+        assertEquals(60f, Smoothness.targetFps(0f, 0f), 0.01f)       // nothing known yet
+    }
+
+    @Test fun smoothnessLevels() {
+        assertEquals(Smoothness.GOOD, Smoothness.fpsLevel(119f, 118f, 120f))
+        assertEquals(Smoothness.GOOD, Smoothness.fpsLevel(27.9f, 29.5f, 60f))
+        assertEquals(Smoothness.WARN, Smoothness.fpsLevel(47.8f, 52f, 60f))
+        assertEquals(Smoothness.BAD, Smoothness.fpsLevel(20f, 52f, 60f))
+        assertEquals(Smoothness.UNKNOWN, Smoothness.fpsLevel(-1f, 0f, 60f))
+        assertEquals(Smoothness.GOOD, Smoothness.tempLevel(48f, false))
+        assertEquals(Smoothness.WARN, Smoothness.tempLevel(62f, true))   // Redmi Note 9: capped at 63 C
+        assertEquals(Smoothness.WARN, Smoothness.tempLevel(75f, false))
+        assertEquals(Smoothness.BAD, Smoothness.tempLevel(90f, false))
+        assertEquals(Smoothness.UNKNOWN, Smoothness.tempLevel(Float.NaN, false))
+    }
 }

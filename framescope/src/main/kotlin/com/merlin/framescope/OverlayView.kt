@@ -9,13 +9,14 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.View
+import com.merlin.fpscore.Smoothness
 
 /**
  * Single custom View drawn on a Canvas. No layouts, no allocations in onDraw:
  * paints, path, rect, string builder and the snapshot are all preallocated.
  */
 @SuppressLint("ViewConstructor")
-class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs: Prefs) : View(ctx) {
+class OverlayView(ctx: Context, private val source: SnapshotSource, private val prefs: Prefs) : View(ctx) {
     private val snap = Snapshot()
     private val sb = StringBuilder(96)
     private val density = resources.displayMetrics.density
@@ -51,8 +52,21 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         color = 0xFF9AB0C0.toInt()
         typeface = Typeface.MONOSPACE
     }
+    private val pillBorder = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x26FFFFFF
+        style = Paint.Style.STROKE
+    }
+    private val sparkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF4FC3F7.toInt()
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
     private val path = Path()
     private val rect = RectF()
+    private var colorize = true
+    private var fpsColor = Color.WHITE
+    private var tempColor = Color.WHITE
 
     private var pad = 0f
     private var lineH = 0f
@@ -82,6 +96,9 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         showTemps = prefs.showTemps
         showRam = prefs.showRam
         showSwap = prefs.showSwap
+        colorize = prefs.colorize
+        pillBorder.strokeWidth = 1f * density
+        sparkPaint.strokeWidth = 1.3f * density
         bgPaint.color = Color.argb(prefs.bgAlpha.coerceIn(0, 255), 0, 0, 0)
         pad = 6 * density * s
         bigPaint.textSize = (if (preset == Prefs.PRESET_MINIMAL) 20 else 22) * density * s
@@ -112,6 +129,10 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
                 widthPx = compactWidth(compactHasGpu)
                 heightPx = (compactVal.fontSpacing + 1.4f * pad).toInt()
             }
+            Prefs.PRESET_PILL -> {
+                widthPx = pillWidth(compactHasGpu)
+                heightPx = (compactVal.fontSpacing + 1.7f * pad).toInt()
+            }
             else -> {
                 var widest = textPaint.measureText("avg 000 1% 000 .1% 000")
                 if (preset == Prefs.PRESET_FULL && showRam) {
@@ -136,11 +157,24 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
     }
 
     override fun onDraw(canvas: Canvas) {
-        synchronized(sampler.lock) { snap.copyFrom(sampler.shared) }
+        synchronized(source.lock) { snap.copyFrom(source.shared) }
         val w = width.toFloat()
         rect.set(0f, 0f, w, height.toFloat())
-        val r = 8 * density
+        val r = if (preset == Prefs.PRESET_PILL) height / 2f else 8 * density
         canvas.drawRoundRect(rect, r, r, bgPaint)
+
+        // Color by smoothness: FPS against its target, temperature against throttling.
+        fpsColor = levelColor(if (colorize) Smoothness.fpsLevel(snap.fps, snap.avgFps, snap.refreshHz) else Smoothness.UNKNOWN, true)
+        tempColor = levelColor(if (colorize) Smoothness.tempLevel(snap.tSoc, snap.cpuCapped) else Smoothness.UNKNOWN, false)
+        bigPaint.color = fpsColor
+
+        if (preset == Prefs.PRESET_PILL) {
+            val half = pillBorder.strokeWidth / 2f
+            rect.inset(half, half)
+            canvas.drawRoundRect(rect, r, r, pillBorder)
+            drawPill(canvas)
+            return
+        }
 
         if (preset == Prefs.PRESET_COMPACT) {
             drawCompact(canvas)
@@ -258,8 +292,110 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
             sb.setLength(0)
             appendTemp(sb, "SoC ", snap.tSoc)
             appendTemp(sb, "  Bat ", snap.tBattery)
+            val normal = textPaint.color
+            if (tempColor != Color.WHITE) textPaint.color = tempColor
             canvas.drawText(sb, 0, sb.length, x, y, textPaint)
+            textPaint.color = normal
         }
+    }
+
+    /** Green stays white for temperature (only warnings are colored); FPS shows green too. */
+    private fun levelColor(level: Int, greenWhenGood: Boolean): Int = when (level) {
+        Smoothness.GOOD -> if (greenWhenGood) COLOR_GOOD else Color.WHITE
+        Smoothness.WARN -> COLOR_WARN
+        Smoothness.BAD -> COLOR_BAD
+        else -> Color.WHITE
+    }
+
+    private fun pillGap() = compactLabel.measureText("  ")
+    private fun sparkWidth() = compactVal.textSize * 3.2f
+
+    private fun pillWidth(withGpu: Boolean): Int {
+        val gap = pillGap()
+        var w = compactVal.measureText("144") + gap + sparkWidth() + gap +
+            compactLabel.measureText("CPU ") + compactVal.measureText("100%") + gap +
+            compactLabel.measureText("RAM ") + compactVal.measureText("100%") + gap +
+            compactVal.measureText("100°")
+        if (withGpu) w += compactLabel.measureText("GPU ") + compactVal.measureText("100%") + gap
+        return (w + 2 * pillPadX() + 2 * density).toInt()
+    }
+
+    private fun pillPadX() = pad * 2f
+
+    /** `60 ⌇⌇ CPU 23%  GPU 45%  RAM 79%  42°` in a rounded pill. */
+    private fun drawPill(canvas: Canvas) {
+        val hasGpu = snap.gpuAccurate && snap.gpuBusy >= 0f
+        if (hasGpu != compactHasGpu) {
+            compactHasGpu = hasGpu
+            widthPx = pillWidth(hasGpu)
+            post { requestLayout() }
+        }
+        val h = height.toFloat()
+        val y = (h - compactVal.descent() - compactVal.ascent()) / 2f
+        val gap = pillGap()
+        var x = pillPadX()
+        if (snap.status.isNotEmpty() && snap.fps < 0f) {
+            canvas.drawText(snap.status, x, y, compactLabel)
+            return
+        }
+        // FPS, colored
+        sb.setLength(0)
+        if (snap.fps < 0f) sb.append("--") else appendFixed(sb, snap.fps, 0)
+        compactVal.color = fpsColor
+        x = seg(canvas, x, y, compactVal) + gap
+        compactVal.color = Color.WHITE
+        // Mini frame-time line (most recent frames)
+        drawSpark(canvas, x, h * 0.26f, sparkWidth(), h * 0.48f)
+        x += sparkWidth() + gap
+        // CPU
+        x = label(canvas, x, y, "CPU ")
+        sb.setLength(0)
+        if (snap.cpuLoad < 0f) sb.append("--") else appendFixed(sb, snap.cpuLoad, 0)
+        sb.append('%')
+        x = seg(canvas, x, y, compactVal) + gap
+        // GPU (driver source only)
+        if (hasGpu) {
+            x = label(canvas, x, y, "GPU ")
+            sb.setLength(0)
+            appendFixed(sb, snap.gpuBusy, 0)
+            sb.append('%')
+            x = seg(canvas, x, y, compactVal) + gap
+        }
+        // RAM
+        x = label(canvas, x, y, "RAM ")
+        sb.setLength(0)
+        if (snap.ramTotalMB > 0 && snap.ramUsedMB >= 0) appendFixed(sb, snap.ramUsedMB * 100f / snap.ramTotalMB, 0) else sb.append("--")
+        sb.append('%')
+        x = seg(canvas, x, y, compactVal) + gap
+        // SoC temperature, colored when hot
+        sb.setLength(0)
+        if (snap.tSoc.isNaN()) sb.append("--") else appendFixed(sb, snap.tSoc, 0)
+        sb.append('°')
+        compactVal.color = tempColor
+        seg(canvas, x, y, compactVal)
+        compactVal.color = Color.WHITE
+    }
+
+    private fun drawSpark(canvas: Canvas, left: Float, top: Float, w: Float, h: Float) {
+        val total = snap.graphN
+        val n = if (total > SPARK_POINTS) SPARK_POINTS else total
+        if (n < 2) return
+        val start = total - n
+        val targetMs = if (snap.refreshHz > 0f) 1000f / snap.refreshHz else 16.67f
+        var maxMs = targetMs * 2.2f
+        for (i in start until total) if (snap.graph[i] > maxMs) maxMs = snap.graph[i]
+        if (maxMs > 100f) maxMs = 100f
+        path.rewind()
+        val step = w / (SPARK_POINTS - 1)
+        val x0 = left + w - (n - 1) * step
+        for (i in 0 until n) {
+            val raw = snap.graph[start + i]
+            val v = if (raw > maxMs) maxMs else raw
+            val px = x0 + i * step
+            val py = top + h - (v / maxMs) * h
+            if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+        }
+        canvas.drawPath(path, sparkPaint)
     }
 
     /** Whether the Compact line currently includes the GPU segment (only with an accurate source). */
@@ -294,7 +430,9 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         // FPS
         sb.setLength(0)
         if (snap.fps < 0f) sb.append("--") else appendFixed(sb, snap.fps, 0)
+        compactVal.color = fpsColor
         x = seg(canvas, x, y, compactVal)
+        compactVal.color = Color.WHITE
         x = label(canvas, x, y, " FPS")
         // CPU %
         x = label(canvas, x, y, SEP + "CPU ")
@@ -321,7 +459,9 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         sb.setLength(0)
         if (snap.tSoc.isNaN()) sb.append("--") else appendFixed(sb, snap.tSoc, 0)
         sb.append('°')
+        compactVal.color = tempColor
         seg(canvas, x, y, compactVal)
+        compactVal.color = Color.WHITE
     }
 
     private fun seg(canvas: Canvas, x: Float, y: Float, p: Paint): Float {
@@ -363,6 +503,10 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
 
     companion object {
         private const val SEP = "  ·  "
+        private const val SPARK_POINTS = 36
+        private const val COLOR_GOOD = 0xFF7ED48A.toInt()
+        private const val COLOR_WARN = 0xFFFFC46B.toInt()
+        private const val COLOR_BAD = 0xFFFF7B72.toInt()
 
         /** Appends a non-negative number with [decimals] (0–2) digits without allocating. */
         fun appendFixed(sb: StringBuilder, v: Float, decimals: Int) {

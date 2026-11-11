@@ -72,13 +72,37 @@ class Snapshot {
     }
 }
 
+/** Where an [OverlayView] gets its numbers: the live [Sampler], or sample data for previews. */
+interface SnapshotSource {
+    val lock: Any
+    val shared: Snapshot
+}
+
+/** Fixed, realistic values for the settings preview (clearly labelled as sample values there). */
+class DemoSource(refreshHz: Float) : SnapshotSource {
+    override val lock = Any()
+    override val shared = Snapshot().apply {
+        val hz = if (refreshHz > 1f) refreshHz else 60f
+        val ft = 1000f / hz
+        fps = hz - 0.4f; avgFps = hz - 1f; low1 = hz * 0.8f; low01 = hz * 0.68f
+        frameTimeMs = ft; jank = 2; this.refreshHz = hz
+        graphN = Snapshot.GRAPH_POINTS
+        for (i in 0 until graphN) graph[i] = if (i == 38 || i == 91) ft * 2f else if (i % 17 == 5) ft * 1.3f else ft
+        cpuLoad = 23f
+        clusterMHz[0] = 1100; clusterMHz[1] = 1800; clusterMHz[2] = 2400; clusters = 3
+        gpuBusy = 45f; gpuMHz = 590; gpuState = 1
+        tSoc = 42f; tBattery = 36f
+        ramUsedMB = 8700; ramTotalMB = 11000; appRamMB = 1330; swapUsedMB = 4500; swapTotalMB = 12000
+    }
+}
+
 /**
  * Polls on one background thread. FPS every [Prefs.pollMs] (default 250 ms);
  * CPU/RAM/GPU every 1 s and temperatures every 2 s, only when enabled.
  */
-class Sampler(private val ctx: Context, private val prefs: Prefs, private val onUpdate: Runnable) {
-    val lock = Any()
-    val shared = Snapshot()
+class Sampler(private val ctx: Context, private val prefs: Prefs, private val onUpdate: Runnable) : SnapshotSource {
+    override val lock = Any()
+    override val shared = Snapshot()
     private val work = Snapshot()
 
     private val thread = HandlerThread("fps-sampler", Process.THREAD_PRIORITY_DEFAULT)
@@ -186,7 +210,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         pollMs = prefs.pollMs.toLong().coerceIn(100, 500)
         fpsWindowNs = prefs.fpsWindowMs.toLong().coerceIn(250, 2000) * 1_000_000L
         extras = prefs.wantsExtras
-        val compact = prefs.preset == Prefs.PRESET_COMPACT
+        val compact = Prefs.isOneLine(prefs.preset)
         wantCpu = compact || (extras && (prefs.showCpuLoad || prefs.showCpuFreq))
         wantGpu = (extras && prefs.showGpu) || compact
         gpuDriverOnly = compact

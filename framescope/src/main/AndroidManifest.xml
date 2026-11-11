@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Lets the setup guide see whether Shizuku is installed and open it (Android 11+ package visibility). -->
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -27,6 +32,16 @@
             android:name=".ProbeActivity"
             android:exported="false"
             android:label="Device probe" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="Customize" />
+
+        <activity
+            android:name=".SetupActivity"
+            android:exported="false"
+            android:label="Set up FrameScope" />
 
         <activity
             android:name=".HelpActivity"

@@ -66,8 +66,8 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = prefs.x
-            y = prefs.y
+            x = prefs.posX(isLandscape())
+            y = prefs.posY(isLandscape())
             if (Build.VERSION.SDK_INT >= 28) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
@@ -95,8 +95,9 @@ class OverlayService : Service() {
                 applyTouchMode()
                 // Position is stored in prefs on every drag, so this only moves the
                 // overlay when something else (e.g. "Reset overlay position") changed it.
-                params.x = prefs.x
-                params.y = prefs.y
+                params.x = prefs.posX(isLandscape())
+                params.y = prefs.posY(isLandscape())
+                view?.let { v -> v.post { settle(v, snap = false); if (v.isAttachedToWindow) wm.updateViewLayout(v, params) } }
                 view?.let { if (it.isAttachedToWindow) wm.updateViewLayout(it, params) }
             }
         }
@@ -112,6 +113,66 @@ class OverlayService : Service() {
         Priv.shutdown()
         requestTileUpdate()
         super.onDestroy()
+    }
+
+    private fun isLandscape() =
+        resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+    private fun screenSize(): android.graphics.Point {
+        val p = android.graphics.Point()
+        if (Build.VERSION.SDK_INT >= 30) {
+            val b = wm.currentWindowMetrics.bounds
+            p.set(b.width(), b.height())
+        } else {
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealSize(p)
+        }
+        return p
+    }
+
+    /**
+     * Keeps the overlay fully on screen and clear of the notch. With [snap] it
+     * also jumps to the left / right edge, the horizontal centre, or the top /
+     * bottom edge when dropped close to one.
+     */
+    private fun settle(v: android.view.View, snap: Boolean) {
+        val size = screenSize()
+        val d = resources.displayMetrics.density
+        val margin = (6 * d).toInt()
+        val magnet = (28 * d).toInt()
+        var l = margin; var t = margin; var r = margin; var b = margin
+        if (Build.VERSION.SDK_INT >= 28) {
+            v.rootWindowInsets?.displayCutout?.let {
+                l += it.safeInsetLeft; t += it.safeInsetTop; r += it.safeInsetRight; b += it.safeInsetBottom
+            }
+        }
+        val maxX = maxOf(l, size.x - v.width - r)
+        val maxY = maxOf(t, size.y - v.height - b)
+        var x = params.x.coerceIn(l, maxX)
+        var y = params.y.coerceIn(t, maxY)
+        if (snap) {
+            val centre = (size.x - v.width) / 2
+            when {
+                x - l < magnet -> x = l
+                maxX - x < magnet -> x = maxX
+                Math.abs(x - centre) < magnet -> x = centre
+            }
+            if (y - t < magnet) y = t else if (maxY - y < magnet) y = maxY
+        }
+        params.x = x
+        params.y = y
+    }
+
+    /** Rotation: restore the position saved for the new orientation. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val v = view ?: return
+        params.x = prefs.posX(isLandscape())
+        params.y = prefs.posY(isLandscape())
+        v.post {
+            settle(v, snap = false)
+            if (v.isAttachedToWindow) wm.updateViewLayout(v, params)
+        }
     }
 
     /**
@@ -159,8 +220,9 @@ class OverlayService : Service() {
                 }
                 MotionEvent.ACTION_UP -> {
                     if (moved) {
-                        prefs.x = params.x
-                        prefs.y = params.y
+                        settle(v, snap = prefs.snapEdges)
+                        wm.updateViewLayout(v, params)
+                        prefs.setPos(isLandscape(), params.x, params.y)
                     } else {
                         // Double-tap: reset jank and avg / 1% / 0.1% lows (e.g. at match start).
                         val now = e.eventTime
