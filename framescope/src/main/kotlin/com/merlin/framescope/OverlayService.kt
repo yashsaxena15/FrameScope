@@ -29,6 +29,12 @@ class OverlayService : Service() {
     private var sampler: Sampler? = null
     private lateinit var params: WindowManager.LayoutParams
     private val invalidate = Runnable { view?.postInvalidate() }
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+
+    // Per-game profiles and automatic showing
+    private var focusPkg: String? = null
+    private var shown = true
+    private val leaveGame = Runnable { applyFocus(null) }
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
@@ -76,7 +82,9 @@ class OverlayService : Service() {
         applyTouchMode()
         attachDrag(v)
         wm.addView(v, params)
+        s.onFocus = { pkg -> main.post { onFocus(pkg) } }
         s.start()
+        applyFocus(null) // hidden until a chosen game opens, when any game is set to show automatically
         registerReceiver(screenReceiver, IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
@@ -89,23 +97,78 @@ class OverlayService : Service() {
         when (intent?.action) {
             ACTION_STOP -> stopSelf()
             ACTION_RESET -> sampler?.resetStats()
-            ACTION_REFRESH -> {
-                sampler?.applyPrefs()
-                view?.applyPrefs()
-                applyTouchMode()
-                // Position is stored in prefs on every drag, so this only moves the
-                // overlay when something else (e.g. "Reset overlay position") changed it.
-                params.x = prefs.posX(isLandscape())
-                params.y = prefs.posY(isLandscape())
-                view?.let { v -> v.post { settle(v, snap = false); if (v.isAttachedToWindow) wm.updateViewLayout(v, params) } }
-                view?.let { if (it.isAttachedToWindow) wm.updateViewLayout(it, params) }
-            }
+            // Settings or the game list changed: re-evaluate everything for the app in front.
+            ACTION_REFRESH -> if (view != null) applyFocus(focusPkg?.takeIf { prefs.hasGame(it) })
         }
         return START_NOT_STICKY
     }
 
+    /** The focused app changed (reported by the sampler). */
+    private fun onFocus(pkg: String) {
+        focusPkg = pkg
+        main.removeCallbacks(leaveGame)
+        if (prefs.hasGame(pkg)) {
+            applyFocus(pkg)
+        } else if (Prefs.activeGame != null) {
+            // Wait a moment before leaving game mode: popups and permission dialogs
+            // take focus briefly while the game keeps running behind them.
+            main.postDelayed(leaveGame, 3000)
+        }
+    }
+
+    /**
+     * Applies the profile of [game] (null = no profiled game in front): its style
+     * and saved position, and whether the overlay is shown. When any game is set
+     * to show automatically, the overlay hides everywhere else.
+     */
+    private fun applyFocus(game: String?) {
+        Prefs.activeGame = game
+        val auto = prefs.autoGames()
+        val show = auto.isEmpty() || (game != null && game in auto)
+        if (show != shown) {
+            shown = show
+            view?.visibility = if (show) android.view.View.VISIBLE else android.view.View.GONE
+            sampler?.setHidden(!show)
+            if (!show) finishSession() // the game was closed: wrap up its session
+        }
+        sampler?.applyPrefs()
+        view?.applyPrefs()
+        applyTouchMode()
+        params.x = prefs.posX(isLandscape())
+        params.y = prefs.posY(isLandscape())
+        view?.let { v ->
+            if (v.isAttachedToWindow) wm.updateViewLayout(v, params)
+            v.post { settle(v, snap = false); if (v.isAttachedToWindow) wm.updateViewLayout(v, params) }
+        }
+    }
+
+    /** Saves the session summary (if there was enough to measure) and offers it in a notification. */
+    private fun finishSession() {
+        val sum = sampler?.takeSummary() ?: return
+        if (sum.frames < 300 || sum.durationMs < 10_000) return
+        SessionStore.save(this, sum)
+        try {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(NotificationChannel(CHANNEL_SUMMARY, "Session summaries", NotificationManager.IMPORTANCE_DEFAULT))
+            val open = PendingIntent.getActivity(
+                this, 4, Intent(this, SummaryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            nm.notify(NOTIF_SUMMARY, Notification.Builder(this, CHANNEL_SUMMARY)
+                .setSmallIcon(R.drawable.ic_fps)
+                .setContentTitle("Session summary: " + Ui.appLabel(this, sum.pkg))
+                .setContentText("avg ${Math.round(sum.avgFps)} FPS · 1% low ${Math.round(sum.low1Fps)} · " + Ui.duration(sum.durationMs))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build())
+        } catch (_: Throwable) {}
+    }
+
     override fun onDestroy() {
         running = false
+        main.removeCallbacks(leaveGame)
+        finishSession()
+        Prefs.activeGame = null
         try { unregisterReceiver(screenReceiver) } catch (_: Throwable) {}
         sampler?.stop()
         view?.let { try { wm.removeView(it) } catch (_: Throwable) {} }
@@ -267,7 +330,10 @@ class OverlayService : Service() {
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_fps)
             .setContentTitle("FrameScope overlay running")
-            .setContentText("Double-tap the overlay to reset stats")
+            .setContentText(
+                if (prefs.autoGames().isNotEmpty()) "Shows automatically in your chosen games"
+                else "Double-tap the overlay to reset stats"
+            )
             .setContentIntent(open)
             .setOngoing(true)
             .addAction(Notification.Action.Builder(null, "Reset stats", reset).build())
@@ -289,6 +355,8 @@ class OverlayService : Service() {
     companion object {
         private const val CHANNEL = "overlay"
         private const val NOTIF_ID = 1
+        private const val CHANNEL_SUMMARY = "summary"
+        const val NOTIF_SUMMARY = 2
         const val ACTION_STOP = "com.merlin.framescope.STOP"
         const val ACTION_REFRESH = "com.merlin.framescope.REFRESH"
         const val ACTION_RESET = "com.merlin.framescope.RESET"

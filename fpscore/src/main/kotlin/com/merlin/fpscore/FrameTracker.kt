@@ -34,6 +34,9 @@ class FrameTracker(capacity: Int = 4096) {
     var sessionBigJank: Int = 0
         private set
 
+    /** Optional receiver of every accepted frame time (session recording). */
+    var sink: FrameSink? = null
+
     /** Vsync period used for jank thresholds; update from the --latency header. */
     var vsyncPeriodNs: Long = 16_666_667L
 
@@ -87,7 +90,10 @@ class FrameTracker(capacity: Int = 4096) {
             if (t <= lastTimestamp) continue
             if (lastTimestamp != 0L) {
                 val ftMs = (t - lastTimestamp) / 1_000_000f
-                if (ftMs < PAUSE_MS) trackJank(ftMs)
+                if (ftMs < PAUSE_MS) {
+                    trackJank(ftMs)
+                    sink?.onFrame(ftMs)
+                }
             }
             ts[head] = t
             head = (head + 1) % ts.size

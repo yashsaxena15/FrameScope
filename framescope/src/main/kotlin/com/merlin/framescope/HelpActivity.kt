@@ -45,10 +45,17 @@ class HelpActivity : Activity() {
         section("Pill style")
         item("60 ⌇ CPU 23% GPU 45% RAM 79% 42°", "colored FPS, a mini line of the latest frame times (spikes are slow frames), CPU, GPU (when it can be read accurately), RAM and SoC temperature.")
 
-        section("Compact preset")
-        item("60 FPS · CPU 23% · GPU 45% · RAM 79% · 42°", "frames per second, total CPU usage, GPU usage, RAM used by the whole device, and SoC temperature, in one line. GPU appears only when FrameScope can read it from the GPU driver (root, or phones that allow it), because the alternative is not accurate.")
+        section("Ring gauge style")
+        item("Ring", "fills toward the target FPS (the screen's refresh rate, or a lower cap the game clearly runs at). A full ring means the game is hitting its target. Beside it: CPU, GPU (when it can be read accurately), RAM, SoC temperature and the 1% low.")
 
-        section("System (Full preset)")
+        section("Games")
+        item("Game profiles", "in the Overlay tab, add a game to give it its own style. Drag the overlay while that game is open and the position is saved for it.")
+        item("Show automatically", "start FrameScope once and it waits in the background; the overlay appears in the games you ticked and hides everywhere else. Shizuku or root must be running.")
+
+        section("Session summary")
+        item("Summary", "when the overlay stops (or an automatic game is closed) after at least 10 seconds, FrameScope shows average FPS, 1% and 0.1% lows, stutters, peak SoC temperature, the share of time the CPU was throttled, and a frame-time graph. You can share it as an image.")
+
+        section("System (Full style)")
         item("CPU 50%", "total CPU usage across all cores.")
         item("1.0|0.6|0.8 GHz", "current speed of each CPU core cluster, ordered from the slowest cluster to the fastest (e.g. efficiency | performance | prime).")
         item("RAM 8.6/11.0G 79%", "RAM in use / RAM usable by Android (part of the advertised RAM is reserved by the system).")

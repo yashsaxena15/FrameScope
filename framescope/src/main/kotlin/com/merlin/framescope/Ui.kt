@@ -123,13 +123,29 @@ internal class Ui(private val ctx: Context) {
             } catch (_: Throwable) {}
         }
 
+        fun appLabel(ctx: Context, pkg: String): String = try {
+            val pm = ctx.packageManager
+            pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+        } catch (_: Throwable) {
+            pkg
+        }
+
+        /** "12 min 30 s", "45 s", "1 h 5 min". */
+        fun duration(ms: Long): String {
+            val s = ms / 1000
+            return when {
+                s >= 3600 -> "${s / 3600} h ${(s % 3600) / 60} min"
+                s >= 60 -> "${s / 60} min ${s % 60} s"
+                else -> "$s s"
+            }
+        }
+
         /** Overlay styles in display order: stored value, name, one-line description. */
         val STYLES = arrayOf(
             Triple(Prefs.PRESET_MINIMAL, "Minimal", "FPS number only"),
             Triple(Prefs.PRESET_PILL, "Pill", "Colored FPS, mini graph, CPU, RAM, temp"),
-            Triple(Prefs.PRESET_COMPACT, "Compact", "One line of text"),
-            Triple(Prefs.PRESET_STANDARD, "Standard", "FPS stats and frame-time graph"),
-            Triple(Prefs.PRESET_FULL, "Full", "Everything: CPU, RAM, GPU, temps"),
+            Triple(Prefs.PRESET_RING, "Ring gauge", "Ring toward target FPS, plus key stats"),
+            Triple(Prefs.PRESET_FULL, "Full", "FPS stats, graph, CPU, RAM, GPU, temps"),
         )
     }
 }

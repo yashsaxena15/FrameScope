@@ -78,7 +78,7 @@ class SetupActivity : Activity() {
                 addView(ui.text(name, 14f, bold = true))
                 addView(ui.text(desc, 12f, ui.muted))
                 setOnClickListener {
-                    prefs.preset = value
+                    prefs.globalPreset = value
                     refresh()
                 }
             }
@@ -177,7 +177,7 @@ class SetupActivity : Activity() {
 
         // Step 3
         setBadge(badge3, 3, false, current = connected && canDraw)
-        val current = prefs.preset
+        val current = prefs.globalPreset
         for ((value, row) in styleRows) {
             val on = value == current
             row.background = ui.rounded(if (on) ui.accentSoft else 0x00000000, 10, if (on) ui.accent else ui.stroke, if (on) 2 else 1)

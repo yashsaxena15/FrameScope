@@ -5,9 +5,78 @@ import android.content.Context
 class Prefs(ctx: Context) {
     private val sp = ctx.applicationContext.getSharedPreferences("framescope", Context.MODE_PRIVATE)
 
-    var preset: Int
-        get() = sp.getInt("preset", PRESET_STANDARD)
+    /** The default overlay style (used wherever no game profile overrides it). */
+    var globalPreset: Int
+        get() = migrate(sp.getInt("preset", PRESET_PILL))
         set(v) = sp.edit().putInt("preset", v).apply()
+
+    /**
+     * The style in effect right now: the profile of the game in front
+     * ([activeGame]) when it sets one, otherwise [globalPreset].
+     */
+    val preset: Int
+        get() {
+            val g = activeGame
+            if (g != null) {
+                val p = sp.getInt("g.$g.preset", -1)
+                if (p >= 0) return migrate(p)
+            }
+            return globalPreset
+        }
+
+    /** Styles removed in 1.3: Standard becomes Full, Compact becomes Pill. */
+    private fun migrate(p: Int) = when (p) {
+        PRESET_STANDARD_OLD -> PRESET_FULL
+        PRESET_COMPACT_OLD -> PRESET_PILL
+        else -> p
+    }
+
+    // ── per-game profiles ────────────────────────────────────────────────────
+
+    fun games(): List<String> = (sp.getStringSet("games", null) ?: emptySet()).sorted()
+    fun hasGame(pkg: String): Boolean = sp.getStringSet("games", null)?.contains(pkg) == true
+
+    fun addGame(pkg: String) {
+        val set = HashSet(sp.getStringSet("games", null) ?: emptySet())
+        set.add(pkg)
+        sp.edit().putStringSet("games", set).apply()
+    }
+
+    fun removeGame(pkg: String) {
+        val set = HashSet(sp.getStringSet("games", null) ?: emptySet())
+        set.remove(pkg)
+        val auto = HashSet(sp.getStringSet("autoGames", null) ?: emptySet())
+        auto.remove(pkg)
+        sp.edit().putStringSet("games", set).putStringSet("autoGames", auto)
+            .remove("g.$pkg.preset").remove("g.$pkg.x").remove("g.$pkg.y").remove("g.$pkg.xl").remove("g.$pkg.yl")
+            .apply()
+    }
+
+    /** Style for this game, or -1 for "same as default". */
+    fun gamePreset(pkg: String): Int = sp.getInt("g.$pkg.preset", -1).let { if (it >= 0) migrate(it) else -1 }
+    fun setGamePreset(pkg: String, preset: Int) {
+        if (preset < 0) sp.edit().remove("g.$pkg.preset").apply()
+        else sp.edit().putInt("g.$pkg.preset", preset).apply()
+    }
+
+    /** Games in which the overlay shows by itself; when any are set, it hides everywhere else. */
+    fun autoGames(): Set<String> = sp.getStringSet("autoGames", null) ?: emptySet()
+    fun isAuto(pkg: String): Boolean = autoGames().contains(pkg)
+    fun setAuto(pkg: String, on: Boolean) {
+        val auto = HashSet(autoGames())
+        if (on) auto.add(pkg) else auto.remove(pkg)
+        sp.edit().putStringSet("autoGames", auto).apply()
+    }
+
+    /** Record a session summary (average FPS, lows, jank, temperature) while the overlay runs. */
+    var sessionSummary: Boolean
+        get() = sp.getBoolean("sessionSummary", true)
+        set(v) = sp.edit().putBoolean("sessionSummary", v).apply()
+
+    private fun posPrefix(): String {
+        val g = activeGame
+        return if (g != null && hasGame(g)) "g.$g." else ""
+    }
 
     var showCpuLoad: Boolean
         get() = sp.getBoolean("cpuLoad", true)
@@ -58,10 +127,18 @@ class Prefs(ctx: Context) {
         set(v) = sp.edit().putInt("bgAlpha", v).apply()
 
     /** Overlay position, remembered separately for portrait and landscape. */
-    fun posX(landscape: Boolean): Int = sp.getInt(if (landscape) "xl" else "x", DEFAULT_X)
-    fun posY(landscape: Boolean): Int = sp.getInt(if (landscape) "yl" else "y", DEFAULT_Y)
+    // A game with a profile keeps its own position; it starts from the default one.
+    fun posX(landscape: Boolean): Int {
+        val k = if (landscape) "xl" else "x"
+        return sp.getInt(posPrefix() + k, sp.getInt(k, DEFAULT_X))
+    }
+    fun posY(landscape: Boolean): Int {
+        val k = if (landscape) "yl" else "y"
+        return sp.getInt(posPrefix() + k, sp.getInt(k, DEFAULT_Y))
+    }
     fun setPos(landscape: Boolean, x: Int, y: Int) {
-        sp.edit().putInt(if (landscape) "xl" else "x", x).putInt(if (landscape) "yl" else "y", y).apply()
+        val pre = posPrefix()
+        sp.edit().putInt(pre + (if (landscape) "xl" else "x"), x).putInt(pre + (if (landscape) "yl" else "y"), y).apply()
     }
 
     /** FPS turns green / amber / red by smoothness; temperature amber / red when hot. */
@@ -96,7 +173,9 @@ class Prefs(ctx: Context) {
 
     /** Moves the overlay back to its default spot (top-left, below the status bar). */
     fun resetPosition() {
-        sp.edit().remove("x").remove("y").remove("xl").remove("yl").apply()
+        val e = sp.edit().remove("x").remove("y").remove("xl").remove("yl")
+        for (g in games()) e.remove("g.$g.x").remove("g.$g.y").remove("g.$g.xl").remove("g.$g.yl")
+        e.apply()
     }
 
     companion object {
@@ -106,15 +185,21 @@ class Prefs(ctx: Context) {
         const val ACCESS_ROOT = 2
         const val DEFAULT_X = 24
         const val DEFAULT_Y = 160
+        /** The game currently in front while the overlay runs, if it has a profile. Set by OverlayService. */
+        @Volatile
+        var activeGame: String? = null
+
         const val PRESET_MINIMAL = 0
-        const val PRESET_STANDARD = 1
+        /** FPS stats, frame-time graph, CPU, RAM, GPU, temperatures. */
         const val PRESET_FULL = 2
-        /** One line: FPS · CPU % · RAM % · SoC °C. (Value 3 keeps stored presets stable.) */
-        const val PRESET_COMPACT = 3
         /** Rounded pill: colored FPS, mini frame-time line, CPU / GPU / RAM %, temperature. */
         const val PRESET_PILL = 4
+        /** Ring that fills toward the target FPS, with CPU / GPU / RAM / temperature and the 1% low. */
+        const val PRESET_RING = 5
+        private const val PRESET_STANDARD_OLD = 1
+        private const val PRESET_COMPACT_OLD = 3
 
-        /** One-line presets share the same data needs (system RAM %, driver-only GPU). */
-        fun isOneLine(preset: Int) = preset == PRESET_COMPACT || preset == PRESET_PILL
+        /** Pill and Ring share the same data needs (system RAM %, driver-only GPU, no per-app RAM). */
+        fun isOneLine(preset: Int) = preset == PRESET_PILL || preset == PRESET_RING
     }
 }

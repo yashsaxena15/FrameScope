@@ -9,6 +9,11 @@
     <!-- Lets the setup guide see whether Shizuku is installed and open it (Android 11+ package visibility). -->
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
+        <!-- Lets the user pick their games from the installed apps, and shows app names in summaries. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -34,9 +39,9 @@
             android:label="Device probe" />
 
         <activity
-            android:name=".SettingsActivity"
+            android:name=".SummaryActivity"
             android:exported="false"
-            android:label="Customize" />
+            android:label="Session summary" />
 
         <activity
             android:name=".SetupActivity"
@@ -74,6 +79,13 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <!-- Serves the session-summary image to the app the user shares it with. -->
+        <provider
+            android:name=".ShareProvider"
+            android:authorities="${applicationId}.share"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <!-- Shizuku binder delivery -->
         <provider

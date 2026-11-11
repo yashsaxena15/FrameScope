@@ -10,6 +10,7 @@ import android.os.Process
 import android.os.SystemClock
 import com.merlin.fpscore.CpuLoad
 import com.merlin.fpscore.FpsStats
+import com.merlin.fpscore.FrameSink
 import com.merlin.fpscore.FrameTracker
 import com.merlin.fpscore.GpuSysfs
 import com.merlin.fpscore.LatencyParser
@@ -17,6 +18,8 @@ import com.merlin.fpscore.LayerChooser
 import com.merlin.fpscore.LayerResolver
 import com.merlin.fpscore.MemInfo
 import com.merlin.fpscore.RunningMean
+import com.merlin.fpscore.SessionStats
+import com.merlin.fpscore.SessionSummary
 import com.merlin.fpscore.ThermalParser
 import com.merlin.fpscore.ThermalZones
 
@@ -112,6 +115,58 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private val latencyParser = LatencyParser()
     private val tsBuf = LongArray(256)
     private val tracker = FrameTracker(4096)
+
+    // Session recording: one SessionStats per measured app (the busiest one becomes the summary).
+    private val sessionLock = Any()
+    private val sessions = HashMap<String, SessionStats>()
+    @Volatile private var session: SessionStats? = null
+    private var recordSession = true
+    private var capReadable = false
+
+    /** Called on the sampler thread when the focused app's package changes. */
+    @Volatile var onFocus: ((String) -> Unit)? = null
+    private var focusPkg: String? = null
+
+    /** Watch-only mode: keep following the focused app, but measure and draw nothing. */
+    @Volatile var hidden = false
+        private set
+
+    init {
+        tracker.sink = object : FrameSink {
+            override fun onFrame(frameTimeMs: Float) {
+                val s = session ?: return
+                synchronized(sessionLock) { s.onFrame(frameTimeMs) }
+            }
+        }
+    }
+
+    fun setHidden(h: Boolean) {
+        if (hidden == h) return
+        hidden = h
+        if (!h && ::handler.isInitialized) handler.post {
+            // Coming back into view: find the app's layer again right away.
+            component = null
+            layer = null
+            layerPkg = null
+            nextFocusAt = 0L
+        }
+    }
+
+    private fun selectSession(pkg: String?) {
+        session = if (pkg == null || !recordSession || pkg == ctx.packageName) null
+        else synchronized(sessionLock) {
+            sessions[pkg] ?: if (sessions.size < MAX_SESSIONS) SessionStats().also { sessions[pkg] = it } else null
+        }
+    }
+
+    /** Summary of the app measured most since the last call, and start over. Null if nothing was recorded. */
+    fun takeSummary(): SessionSummary? = synchronized(sessionLock) {
+        val best = sessions.maxByOrNull { it.value.frameCount }
+        val sum = best?.value?.summary(best.key, shared.refreshHz, System.currentTimeMillis())
+        sessions.clear()
+        session = null
+        sum
+    }
     private val stats = FpsStats()
     private val cpuLoad = CpuLoad()
     private val memInfo = MemInfo()
@@ -211,10 +266,12 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         fpsWindowNs = prefs.fpsWindowMs.toLong().coerceIn(250, 2000) * 1_000_000L
         extras = prefs.wantsExtras
         val compact = Prefs.isOneLine(prefs.preset)
-        wantCpu = compact || (extras && (prefs.showCpuLoad || prefs.showCpuFreq))
+        // The session summary needs peak temperature and throttling in every style.
+        recordSession = prefs.sessionSummary
+        wantCpu = compact || recordSession || (extras && (prefs.showCpuLoad || prefs.showCpuFreq))
         wantGpu = (extras && prefs.showGpu) || compact
         gpuDriverOnly = compact
-        wantTemps = compact || (extras && prefs.showTemps)
+        wantTemps = compact || recordSession || (extras && prefs.showTemps)
         wantRam = compact || (extras && prefs.showRam)
         wantAppRam = extras && prefs.showRam
         if (::handler.isInitialized && !wantGpu && gpuStarted) handler.post { stopGpu() }
@@ -258,6 +315,18 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         if (now >= nextFocusAt) {
             nextFocusAt = now + 1000
             val comp = LayerResolver.focusedComponent(svc.dump("window", arrayOf("displays")) ?: "")
+            if (comp != null) {
+                val pkg = LayerResolver.packageOf(comp)
+                if (pkg != focusPkg) {
+                    focusPkg = pkg
+                    onFocus?.invoke(pkg)
+                }
+            }
+            if (hidden) {
+                work.status = ""
+                work.fps = -1f
+                return
+            }
             if (comp != null && comp != component) {
                 component = comp
                 resolveLayer(svc)
@@ -270,6 +339,9 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
                 resolveLayer(svc)
             }
         }
+
+        if (hidden) return
+        if (session == null && recordSession) selectSession(layerPkg)
 
         val l = layer
         if (l == null) {
@@ -302,6 +374,12 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             work.low01 = stats.low01Fps
             work.jank = stats.jank
             work.gaps = tracker.gapCount
+            session?.let { st ->
+                synchronized(sessionLock) {
+                    st.vsyncMs = tracker.vsyncPeriodNs / 1_000_000f
+                    st.tick(now, work.tSoc, work.cpuCapped, capReadable)
+                }
+            }
             work.graphN = tracker.recentFrameTimes(work.graph)
             work.frameTimeMs = if (work.graphN > 0) work.graph[work.graphN - 1] else 0f
         }
@@ -382,6 +460,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             lastFrameAt = SystemClock.uptimeMillis()
         }
         layerPkg = chosenPkg
+        selectSession(chosenPkg)
         work.pkg = chosenPkg ?: pkg
     }
 
@@ -424,6 +503,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         var capped = false
         for (i in 0 until nClusters) {
             val lim = res.getOrNull(nClusters + 1 + i)?.trim()?.toLongOrNull() ?: continue
+            capReadable = true
             val hw = clusterHwMaxKHz.getOrElse(i) { 0L }
             if (hw > 0 && lim < hw * 98 / 100) capped = true
         }
@@ -437,7 +517,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
      */
     private fun sampleFast(svc: PrivApi) {
         val gpu = wantGpu && sourcesProbed && (gpuLoadPath != null || gpuFreqPath != null)
-        val cl = if (wantCpu && prefs.showCpuFreq) clusterPaths else null
+        val cl = if (extras && prefs.showCpuFreq) clusterPaths else null
         if (!gpu && cl == null) return
         val paths = ArrayList<String>(2 + (cl?.size ?: 0))
         if (gpu) { paths.add(gpuLoadPath ?: ""); paths.add(gpuFreqPath ?: "") }
@@ -574,5 +654,6 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     companion object {
         /** Window for avg / 1% low / 0.1% low. */
         const val STATS_WINDOW_NS = 10_000_000_000L
+        private const val MAX_SESSIONS = 6
     }
 }

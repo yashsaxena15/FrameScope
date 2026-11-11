@@ -29,14 +29,15 @@ uses almost no memory or CPU, and has **no internet permission**.
 - **CPU.** Total load, plus the current frequency of each core cluster, ordered slowest to fastest.
 - **Memory.** System RAM used / usable, the RAM of the app in front, and optional swap (ZRAM + memory extension).
 - **Temperatures.** SoC and battery, from Android's thermal service.
-- **Five overlay styles:**
+- **Four overlay styles:**
   - **Minimal:** FPS only.
   - **Pill:** a slim pill with colored FPS, a mini frame-time line, CPU, GPU (with root), RAM and temperature.
-  - **Compact:** one line with FPS, CPU %, GPU % (with root), RAM % and SoC temperature.
-  - **Standard:** FPS stats + graph.
-  - **Full:** Standard + CPU, RAM and temperatures.
+  - **Ring gauge:** a ring that fills toward the target FPS, with CPU, GPU (with root), RAM, temperature and the 1% low.
+  - **Full:** FPS stats, frame-time graph, CPU, RAM, GPU and temperatures.
+- **Game profiles.** Give each game its own style and overlay position, and let the overlay appear automatically when that game opens.
+- **Session summary.** When the overlay stops: average FPS, 1% / 0.1% lows, stutters, peak temperature, throttled time and a frame-time graph, shareable as an image.
 - **Color by smoothness.** FPS turns green, amber or red against its target; temperature turns amber or red when the chip is hot or throttled.
-- **Guided setup** on first launch, and a home screen with a live preview and one-tap fixes when something is missing.
+- **Guided setup** on first launch, and a tabbed app (Home, Overlay, Metrics, About) with a live preview and one-tap fixes when something is missing.
 - **Snap to edges.** The overlay snaps to screen edges, stays clear of the notch, and remembers portrait and landscape positions separately.
 - **Made for gaming.** Drag to position, lock to let touches pass through, adjustable size and opacity. **Double-tap to reset stats** at the start of a match.
 - **Quick Settings tile**, notification controls, and a built-in **?** help screen.
@@ -63,9 +64,7 @@ uses almost no memory or CPU, and has **no internet permission**.
 
 ## Reading the overlay
 
-**Compact preset:** `60 FPS · CPU 23% · GPU 45% · RAM 79% · 42°` shows FPS, total CPU usage, GPU usage, RAM used by the whole device, and SoC temperature. GPU appears only when FrameScope can read it from the GPU driver (root, or phones that allow it).
-
-**Standard / Full presets:**
+**Full style:**
 
 | Overlay | Meaning |
 |---|---|

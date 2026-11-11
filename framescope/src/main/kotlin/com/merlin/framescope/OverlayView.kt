@@ -74,7 +74,7 @@ class OverlayView(ctx: Context, private val source: SnapshotSource, private val 
     private var graphH = 0f
     private var widthPx = 0
     private var heightPx = 0
-    private var preset = Prefs.PRESET_STANDARD
+    private var preset = Prefs.PRESET_FULL
     private var extraLines = 0
     private var showCpuLoad = true
     private var showCpuFreq = true
@@ -125,9 +125,9 @@ class OverlayView(ctx: Context, private val source: SnapshotSource, private val 
                 widthPx = (bigPaint.measureText("000") + 2 * pad).toInt()
                 heightPx = (bigH + 2 * pad).toInt()
             }
-            Prefs.PRESET_COMPACT -> {
-                widthPx = compactWidth(compactHasGpu)
-                heightPx = (compactVal.fontSpacing + 1.4f * pad).toInt()
+            Prefs.PRESET_RING -> {
+                widthPx = ringWidth(compactHasGpu)
+                heightPx = (ringDiameter() + 1.6f * pad).toInt()
             }
             Prefs.PRESET_PILL -> {
                 widthPx = pillWidth(compactHasGpu)
@@ -176,8 +176,8 @@ class OverlayView(ctx: Context, private val source: SnapshotSource, private val 
             return
         }
 
-        if (preset == Prefs.PRESET_COMPACT) {
-            drawCompact(canvas)
+        if (preset == Prefs.PRESET_RING) {
+            drawRing(canvas)
             return
         }
 
@@ -398,70 +398,121 @@ class OverlayView(ctx: Context, private val source: SnapshotSource, private val 
         canvas.drawPath(path, sparkPaint)
     }
 
-    /** Whether the Compact line currently includes the GPU segment (only with an accurate source). */
+    /** Whether the Pill / Ring currently include the GPU segment (only with an accurate source). */
     private var compactHasGpu = false
 
-    /** Widest realistic content: "144 FPS · CPU 100% · GPU 100% · RAM 100% · 100°". */
-    private fun compactWidth(withGpu: Boolean): Int {
-        var w = compactVal.measureText("144") + compactLabel.measureText(" FPS") +
-            3 * compactLabel.measureText(SEP) +
-            compactLabel.measureText("CPU ") + compactVal.measureText("100%") +
-            compactLabel.measureText("RAM ") + compactVal.measureText("100%") +
-            compactVal.measureText("100°")
-        if (withGpu) w += compactLabel.measureText(SEP + "GPU ") + compactVal.measureText("100%")
-        return (w + 2 * pad + 2 * density).toInt()
+    private val ringTrack = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x33FFFFFF
+        style = Paint.Style.STROKE
+    }
+    private val ringArc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val ringVal = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    private val ringUnit = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF9AB0C0.toInt()
+        typeface = Typeface.MONOSPACE
+        textAlign = Paint.Align.CENTER
+    }
+    private val ringRect = RectF()
+
+    /** Three text lines tall, so the stats sit level with the ring. */
+    private fun ringDiameter() = compactVal.fontSpacing * 3f
+
+    private fun ringTextWidth(withGpu: Boolean): Float {
+        val gap = pillGap()
+        var l1 = compactLabel.measureText("CPU ") + compactVal.measureText("100%")
+        if (withGpu) l1 += gap + compactLabel.measureText("GPU ") + compactVal.measureText("100%")
+        val l2 = compactLabel.measureText("RAM ") + compactVal.measureText("100%") + gap +
+            compactLabel.measureText("SoC ") + compactVal.measureText("100°")
+        val l3 = compactLabel.measureText("1% low ") + compactVal.measureText("144")
+        return maxOf(l1, l2, l3)
     }
 
-    /** `60 FPS · CPU 23% · GPU 45% · RAM 79% · 42°` — or the status message when not connected. */
-    private fun drawCompact(canvas: Canvas) {
+    private fun ringWidth(withGpu: Boolean): Int =
+        (pad * 1.4f + ringDiameter() + pad * 1.4f + ringTextWidth(withGpu) + pad * 1.8f).toInt()
+
+    /** Ring filled toward the target FPS, with the FPS inside and system stats beside it. */
+    private fun drawRing(canvas: Canvas) {
         val hasGpu = snap.gpuAccurate && snap.gpuBusy >= 0f
         if (hasGpu != compactHasGpu) {
-            // GPU source appeared / disappeared: resize once, outside of this draw pass.
             compactHasGpu = hasGpu
-            widthPx = compactWidth(hasGpu)
+            widthPx = ringWidth(hasGpu)
             post { requestLayout() }
         }
-        val y = (height - compactVal.descent() - compactVal.ascent()) / 2f
-        var x = pad
-        if (snap.status.isNotEmpty() && snap.fps < 0f) {
-            canvas.drawText(snap.status, x, y, compactLabel)
-            return
+        val h = height.toFloat()
+        val d = ringDiameter()
+        val stroke = d * 0.1f
+        val left = pad * 1.4f
+        val top = (h - d) / 2f
+        ringRect.set(left + stroke / 2f, top + stroke / 2f, left + d - stroke / 2f, top + d - stroke / 2f)
+        ringTrack.strokeWidth = stroke
+        ringArc.strokeWidth = stroke
+        canvas.drawOval(ringRect, ringTrack)
+        if (snap.fps >= 0f) {
+            val target = Smoothness.targetFps(snap.avgFps, snap.refreshHz)
+            var ratio = snap.fps / target
+            if (ratio > 1f) ratio = 1f
+            ringArc.color = if (colorize) fpsColor else 0xFF4FC3F7.toInt()
+            canvas.drawArc(ringRect, -90f, 360f * ratio, false, ringArc)
         }
-        // FPS
+        // FPS number and unit inside the ring
+        val cx = left + d / 2f
+        ringVal.textSize = d * 0.36f
+        ringUnit.textSize = d * 0.15f
         sb.setLength(0)
         if (snap.fps < 0f) sb.append("--") else appendFixed(sb, snap.fps, 0)
-        compactVal.color = fpsColor
-        x = seg(canvas, x, y, compactVal)
-        compactVal.color = Color.WHITE
-        x = label(canvas, x, y, " FPS")
-        // CPU %
-        x = label(canvas, x, y, SEP + "CPU ")
+        val numY = top + d / 2f - (ringVal.descent() + ringVal.ascent()) / 2f - d * 0.06f
+        canvas.drawText(sb, 0, sb.length, cx, numY, ringVal)
+        canvas.drawText("FPS", cx, numY + ringUnit.textSize * 1.25f, ringUnit)
+
+        // Stats beside it
+        val x0 = left + d + pad * 1.4f
+        val gap = pillGap()
+        val lineH = compactVal.fontSpacing
+        var y = top - compactVal.ascent() + (lineH - (compactVal.descent() - compactVal.ascent())) / 2f
+        if (snap.status.isNotEmpty() && snap.fps < 0f) {
+            canvas.drawText(snap.status, x0, y + lineH, compactLabel)
+            return
+        }
+        // line 1: CPU (and GPU when accurate)
+        var x = label(canvas, x0, y, "CPU ")
         sb.setLength(0)
         if (snap.cpuLoad < 0f) sb.append("--") else appendFixed(sb, snap.cpuLoad, 0)
         sb.append('%')
         x = seg(canvas, x, y, compactVal)
-        // GPU % (only from the GPU driver: root, or phones that expose it)
         if (hasGpu) {
-            x = label(canvas, x, y, SEP + "GPU ")
+            x = label(canvas, x + gap, y, "GPU ")
             sb.setLength(0)
             appendFixed(sb, snap.gpuBusy, 0)
             sb.append('%')
-            x = seg(canvas, x, y, compactVal)
+            seg(canvas, x, y, compactVal)
         }
-        // RAM % (whole device)
-        x = label(canvas, x, y, SEP + "RAM ")
+        // line 2: RAM and SoC temperature
+        y += lineH
+        x = label(canvas, x0, y, "RAM ")
         sb.setLength(0)
         if (snap.ramTotalMB > 0 && snap.ramUsedMB >= 0) appendFixed(sb, snap.ramUsedMB * 100f / snap.ramTotalMB, 0) else sb.append("--")
         sb.append('%')
         x = seg(canvas, x, y, compactVal)
-        // SoC temperature
-        x = label(canvas, x, y, SEP)
+        x = label(canvas, x + gap, y, "SoC ")
         sb.setLength(0)
         if (snap.tSoc.isNaN()) sb.append("--") else appendFixed(sb, snap.tSoc, 0)
         sb.append('°')
         compactVal.color = tempColor
         seg(canvas, x, y, compactVal)
         compactVal.color = Color.WHITE
+        // line 3: 1% low
+        y += lineH
+        x = label(canvas, x0, y, "1% low ")
+        sb.setLength(0)
+        if (snap.low1 <= 0f) sb.append("--") else appendFixed(sb, snap.low1, 0)
+        seg(canvas, x, y, compactVal)
     }
 
     private fun seg(canvas: Canvas, x: Float, y: Float, p: Paint): Float {

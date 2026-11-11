@@ -437,4 +437,55 @@ class FpsCoreTest {
         assertEquals(Smoothness.BAD, Smoothness.tempLevel(90f, false))
         assertEquals(Smoothness.UNKNOWN, Smoothness.tempLevel(Float.NaN, false))
     }
+
+    // ── Session summary ──────────────────────────────────────────────────────
+
+    @Test fun sessionStatsOverAWholeSession() {
+        val st = SessionStats()
+        st.vsyncMs = 16.67f
+        var now = 0L
+        st.tick(now, 40f, false, true)
+        // 60 s at 60 FPS with a 100 ms hitch every 10 s; throttled for the last 20 s.
+        for (sec in 0 until 60) {
+            for (f in 0 until 60) st.onFrame(if (f == 0 && sec % 10 == 5) 100f else 16.67f)
+            for (q in 0 until 4) { now += 250; st.tick(now, 40f + sec * 0.5f, sec >= 40, true) }
+        }
+        val s = st.summary("com.example.game", 60f, 123L)
+        assertEquals(3600L, s.frames)
+        assertEquals(60_000L, s.durationMs)
+        assertTrue("avg=${s.avgFps}", s.avgFps in 58f..60.1f)
+        assertTrue("1% low=${s.low1Fps}", s.low1Fps < 40f)   // 6 hitches among the worst 36 frames
+        assertTrue("0.1% low=${s.low01Fps}", s.low01Fps < 11f) // worst 4 frames are all 100 ms
+        assertEquals(6, s.jank)
+        assertEquals(69.5f, s.peakTempC, 0.01f)
+        assertEquals(20_000L, s.throttledMs)
+        assertEquals(60, s.avgFrameMs.size)
+        assertEquals(1, s.secondsPerPoint)
+        assertTrue(s.maxFrameMs.max() >= 99f)
+    }
+
+    @Test fun sessionSeriesMergesWhenFull() {
+        val st = SessionStats(maxPoints = 8)
+        var now = 0L
+        st.tick(now, Float.NaN, false, false)
+        for (sec in 0 until 20) {
+            for (f in 0 until 30) st.onFrame(33.3f)
+            for (q in 0 until 4) { now += 250; st.tick(now, Float.NaN, false, false) }
+        }
+        val s = st.summary("p", 60f, 0L)
+        assertTrue(s.avgFrameMs.size <= 8)
+        assertTrue(s.secondsPerPoint >= 2)
+        assertEquals(-1L, s.throttledMs)          // limits not readable on this phone
+        assertTrue(s.peakTempC.isNaN())
+    }
+
+    @Test fun sessionSummaryRoundTripsAsText() {
+        val a = SessionSummary("com.x", 5L, 61_000L, 3600L, 59.2f, 38.5f, 10.1f, 6, 69.5f, 20_000L, 60f, 1,
+            floatArrayOf(16.7f, 17.1f), floatArrayOf(16.7f, 100f))
+        val b = SessionSummary.decode(a.encode())!!
+        assertEquals("com.x", b.pkg); assertEquals(3600L, b.frames); assertEquals(6, b.jank)
+        assertEquals(59.2f, b.avgFps, 0.001f); assertEquals(20_000L, b.throttledMs)
+        assertEquals(2, b.maxFrameMs.size); assertEquals(100f, b.maxFrameMs[1], 0.001f)
+        assertEquals(null, SessionSummary.decode("garbage"))
+    }
 }
