@@ -1,0 +1,12 @@
+g_cur_opp_idx = 0, g_cur_opp_freq = 1000000, g_cur_opp_volt = 87500, g_cur_opp_vsram_volt = 97500
+real clock freq = 1000009, MFGPLL freq = 1000000, real volt = 87500, real vsram_volt = 97500
+g_segment_id = 5
+g_volt_enable_state = 1
+g_opp_stress_test_state = 0
+g_max_limited_idx = 0
+gpu_loading = 81
+g_limited_idx_array[0] = 0
+g_limited_idx_array[1] = 0
+g_limited_idx_array[2] = 0
+g_limited_idx_array[3] = 0
+g_limited_idx_array[4] = 0

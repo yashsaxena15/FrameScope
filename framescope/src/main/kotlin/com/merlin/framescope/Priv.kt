@@ -12,7 +12,17 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Shizuku's remote-process API, and exposes it as [service].
  */
 object Priv {
-    enum class State { NO_SHIZUKU, NO_PERMISSION, CONNECTING, FAILED, READY }
+    enum class State { NO_SHIZUKU, NO_PERMISSION, NO_ROOT, CONNECTING, FAILED, READY }
+
+    /** How the running helper was started, for the UI and the probe report. */
+    enum class Via { NONE, SHIZUKU, ROOT }
+
+    @Volatile
+    var via: Via = Via.NONE
+        private set
+
+    /** True when the helper runs as uid 0 (su, or Shizuku started with root). */
+    val isRoot: Boolean get() = (service as? PrivClient)?.helperUid == 0
 
     private const val REQUEST_CODE = 4711
 
@@ -54,13 +64,32 @@ object Priv {
         false
     }
 
+    private fun access(): Int = app?.let { Prefs(it).access } ?: Prefs.ACCESS_AUTO
+
+    /** Path of a usable `su` binary (Magisk, KernelSU, APatch, SuperSU), or null. */
+    fun suPath(): String? {
+        val dirs = (System.getenv("PATH") ?: "").split(':') +
+            listOf("/sbin", "/system/bin", "/system/xbin", "/system_ext/bin", "/debug_ramdisk",
+                "/data/adb/ksu/bin", "/data/adb/ap/bin", "/su/bin")
+        for (d in dirs) {
+            if (d.isEmpty()) continue
+            val f = java.io.File(d, "su")
+            try { if (f.exists()) return f.absolutePath } catch (_: Throwable) {}
+        }
+        return null
+    }
+
+    private fun canUseShizuku() = access() != Prefs.ACCESS_ROOT && hasPermission()
+    private fun canUseRoot() = access() != Prefs.ACCESS_SHIZUKU && suPath() != null
+
     fun state(): State = when {
         service != null -> State.READY
-        !shizukuAlive() -> State.NO_SHIZUKU
-        !hasPermission() -> State.NO_PERMISSION
         connecting -> State.CONNECTING
-        lastError != null -> State.FAILED
-        else -> State.CONNECTING
+        lastError != null && (canUseShizuku() || canUseRoot()) -> State.FAILED
+        canUseShizuku() || canUseRoot() -> State.CONNECTING
+        access() == Prefs.ACCESS_ROOT -> State.NO_ROOT
+        !shizukuAlive() -> State.NO_SHIZUKU
+        else -> State.NO_PERMISSION
     }
 
     fun requestPermission() {
@@ -74,7 +103,7 @@ object Priv {
         wanted = true
         val ctx = app ?: return
         synchronized(this) {
-            if (service != null || connecting || !hasPermission()) return
+            if (service != null || connecting || !(canUseShizuku() || canUseRoot())) return
             connecting = true
         }
         notifyChanged()
@@ -85,12 +114,16 @@ object Priv {
         var proc: Process? = null
         try {
             val apk = ctx.applicationInfo.sourceDir
-            val cmd = arrayOf(
-                "sh", "-c",
-                "CLASSPATH='$apk' exec app_process /system/bin --nice-name=${ctx.packageName}:priv " +
-                    PrivMain::class.java.name
-            )
-            proc = newProcess(cmd)
+            val launch = "CLASSPATH='$apk' exec app_process /system/bin --nice-name=${ctx.packageName}:priv " +
+                PrivMain::class.java.name
+            val useShizuku = canUseShizuku()
+            val su = if (useShizuku) null else suPath()
+            proc = if (useShizuku) {
+                newProcess(arrayOf("sh", "-c", launch))
+            } else {
+                // Root: the same helper, started by su. Magisk/KernelSU asks the user once.
+                ProcessBuilder(su ?: "su", "-c", launch).start()
+            }
             val p = proc
             val stderr = StringBuilder()
             Thread({
@@ -103,7 +136,8 @@ object Priv {
 
             val client = PrivClient(p)
             // Watchdog: a helper that never answers must not block forever.
-            val ok = runWithTimeout(10_000) { client.handshake() }
+            // Root needs time for the user to answer the superuser prompt.
+            val ok = runWithTimeout(if (useShizuku) 10_000 else 30_000) { client.handshake() }
             if (!ok) {
                 p.destroy()
                 lastError = "helper did not start: " + synchronized(stderr) { stderr.toString().take(400) }
@@ -112,12 +146,14 @@ object Priv {
             }
             lastError = null
             failures = 0
+            via = if (useShizuku) Via.SHIZUKU else Via.ROOT
             service = client
             Thread({
                 try { p.waitFor() } catch (_: Throwable) {}
                 client.markDead()
                 if (service === client) {
                     service = null
+                    via = Via.NONE
                     lastError = "helper exited: " + synchronized(stderr) { stderr.toString().take(400) }
                     notifyChanged()
                     if (wanted) main.postDelayed({ ensureBound() }, 2000)
@@ -153,8 +189,10 @@ object Priv {
     }
 
     private fun dropService() {
+        if (via != Via.SHIZUKU) return // a root helper does not depend on Shizuku
         (service as? PrivClient)?.markDead()
         service = null
+        via = Via.NONE
     }
 
     /** Stops the helper (which also stops perfetto). */
@@ -162,6 +200,7 @@ object Priv {
         wanted = false
         val s = service
         service = null
+        via = Via.NONE
         try { s?.exit() } catch (_: Throwable) {}
         notifyChanged()
     }

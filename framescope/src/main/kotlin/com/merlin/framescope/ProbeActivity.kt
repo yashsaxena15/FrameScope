@@ -90,7 +90,7 @@ class ProbeActivity : Activity() {
         sb.append("state=").append(Priv.state()).append('\n')
         Priv.lastError?.let { sb.append("lastError=").append(it).append('\n') }
         val svc = Priv.service ?: return sb.append("Privileged service not connected. Start Shizuku and grant permission.\n").toString()
-        sb.append("service uid=").append(svc.uid()).append('\n')
+        sb.append("service uid=").append(svc.uid()).append(" via=").append(Priv.via).append('\n')
         sb.append(svc.exec("getprop ro.mi.os.version.incremental; getprop ro.board.platform; getprop ro.hardware.vulkan; getenforce") ?: "")
 
         h("CPU")
@@ -110,6 +110,32 @@ class ProbeActivity : Activity() {
             sb.append("total=").append(m.totalKb / 1024).append("MB used=").append(m.usedKb / 1024)
                 .append("MB swap=").append(m.swapUsedKb / 1024).append('/').append(m.swapTotalKb / 1024).append("MB\n")
         }
+
+        h("GPU driver nodes (root)")
+        for (p in com.merlin.fpscore.GpuSysfs.LOAD_PATHS) {
+            val v = svc.readText(p)
+            sb.append(if (v != null) "OK   " else "--   ").append(p)
+            if (v != null) sb.append(" → load ").append(com.merlin.fpscore.GpuSysfs.parseLoad(p, v)).append('%')
+            sb.append('\n')
+        }
+        for (p in com.merlin.fpscore.GpuSysfs.FREQ_PATHS) {
+            val v = svc.readText(p)
+            sb.append(if (v != null) "OK   " else "--   ").append(p)
+            if (v != null) sb.append(" → ").append(com.merlin.fpscore.GpuSysfs.parseFreqMHz(p, v)).append(" MHz")
+            sb.append('\n')
+        }
+
+        h("Thermal sensors (root)")
+        val tz = svc.listDir("/sys/class/thermal").filter { it.startsWith("thermal_zone") }
+        if (tz.isEmpty()) sb.append("not readable (normal without root)\n")
+        for (z in tz.sortedBy { it.removePrefix("thermal_zone").toIntOrNull() ?: 0 }) {
+            val zone = com.merlin.fpscore.ThermalZones.parse(
+                svc.readText("/sys/class/thermal/$z/type"), svc.readText("/sys/class/thermal/$z/temp")) ?: continue
+            sb.append(zone.type).append('=').append(zone.celsius).append("°C")
+            if (com.merlin.fpscore.ThermalZones.isSocZone(zone.type)) sb.append(" [SoC]")
+            sb.append("  ")
+        }
+        sb.append('\n')
 
         h("GPU sysfs candidates")
         for (path in GPU_PATHS) {

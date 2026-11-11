@@ -124,7 +124,7 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
                     widest = maxOf(widest, textPaint.measureText("RAM 10.8/11.0G 98% App 1.65G"))
                 }
                 if (preset == Prefs.PRESET_FULL && (showCpuLoad || showCpuFreq)) {
-                    widest = maxOf(widest, textPaint.measureText("CPU 100% 2.4|3.3|3.7 GHz"))
+                    widest = maxOf(widest, textPaint.measureText("CPU 100% 2.4|3.3|3.7 GHz ▼"))
                 }
                 if (preset == Prefs.PRESET_FULL && showTemps) {
                     widest = maxOf(widest, textPaint.measureText("SoC 100° Bat 45°"))
@@ -211,6 +211,7 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
                     appendFixed(sb, snap.clusterMHz[i] / 1000f, 1)
                 }
                 if (snap.clusters > 0) sb.append(" GHz")
+                if (snap.cpuCapped) sb.append(" ▼")
             }
             canvas.drawText(sb, 0, sb.length, x, y, textPaint)
             y += lineH
@@ -247,13 +248,13 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         }
         if (showGpu) {
             sb.setLength(0)
-            sb.append("GPU* ")
+            sb.append(if (snap.gpuAccurate) "GPU " else "GPU* ")
             when {
                 snap.gpuState < 0 -> sb.append("N/A")
                 snap.gpuState == 0 || snap.gpuBusy < 0f -> sb.append("…")
                 else -> {
-                    appendFixed(sb, snap.gpuBusy, 0); sb.append("% ")
-                    sb.append(snap.gpuMHz); sb.append("MHz")
+                    if (snap.gpuBusy >= 0f) { appendFixed(sb, snap.gpuBusy, 0); sb.append("% ") }
+                    if (snap.gpuMHz > 0) { sb.append(snap.gpuMHz); sb.append("MHz") }
                 }
             }
             canvas.drawText(sb, 0, sb.length, x, y, textPaint)

@@ -49,7 +49,10 @@ class HelpActivity : Activity() {
         item("Swap 4.5/12.0G 38%", "swap in use: compressed ZRAM + the storage \"memory extension\" (virtual RAM), combined. Not GPU memory.")
         item("SoC 55°", "chip temperature from Android's thermal service (the value the phone uses for throttling). Many phones, including HyperOS, report one chip-wide value, so CPU and GPU are not shown separately.")
         item("Bat 42°", "battery temperature.")
-        item("GPU*", "experimental GPU load/frequency from kernel trace events; not accurate on MediaTek chips.")
+        item("▼", "after the CPU speeds: a cluster's maximum frequency is currently limited, usually by heat or a power mode (throttling).")
+        item("GPU", "GPU load and frequency from the GPU driver. Needs root (or a phone that exposes these files); then it is accurate.")
+        item("GPU*", "without root: experimental GPU values from kernel trace events; not accurate on MediaTek chips.")
+        item("Root", "with root, SoC temperature comes from the real chip sensors (the hottest one), and GPU values from the driver.")
 
         section("Tips")
         item("Double-tap", "the overlay to reset jank and the avg / 1% / 0.1% lows — e.g. when a match starts.")

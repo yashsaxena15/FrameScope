@@ -1,0 +1,1 @@
+gpu/cljs0/cljs1=63/0/0, frequency index=31 power(0:off, 1:0n):1

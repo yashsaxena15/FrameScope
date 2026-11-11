@@ -58,11 +58,16 @@ class MainActivity : Activity() {
     private fun refreshStatus() {
         val st = Priv.state()
         shizukuStatus.text = when (st) {
-            Priv.State.READY -> "Shizuku: connected ✓"
-            Priv.State.CONNECTING -> "Shizuku: connecting…"
+            Priv.State.READY -> when {
+                Priv.via == Priv.Via.ROOT -> "Connected via root ✓"
+                Priv.isRoot -> "Connected via Shizuku (root) ✓"
+                else -> "Connected via Shizuku ✓"
+            }
+            Priv.State.CONNECTING -> "Connecting… (grant the superuser prompt if one appears)"
             Priv.State.NO_PERMISSION -> "Shizuku: permission needed"
-            Priv.State.NO_SHIZUKU -> "Shizuku: not running — start it in the Shizuku app"
-            Priv.State.FAILED -> "Shizuku: helper failed — ${Priv.lastError ?: "unknown error"}"
+            Priv.State.NO_SHIZUKU -> "Shizuku: not running — start it in the Shizuku app (or use a rooted phone)"
+            Priv.State.NO_ROOT -> "Root: no su binary found on this phone"
+            Priv.State.FAILED -> "Helper failed — ${Priv.lastError ?: "unknown error"}"
         }
         shizukuButton.visibility = if (st == Priv.State.NO_PERMISSION) View.VISIBLE else View.GONE
         val canDraw = Settings.canDrawOverlays(this)
@@ -120,6 +125,31 @@ class MainActivity : Activity() {
         }
         root.addView(overlayButton)
 
+        root.addView(TextView(this).apply {
+            text = "Access method"
+            alpha = 0.7f
+            setPadding(0, dp(10), 0, 0)
+        })
+        val accessGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
+        arrayOf(
+            Prefs.ACCESS_AUTO to "Auto — Shizuku if granted, otherwise root",
+            Prefs.ACCESS_SHIZUKU to "Shizuku only",
+            Prefs.ACCESS_ROOT to "Root only (su) — adds accurate GPU and real sensors"
+        ).forEach { (v, label) ->
+            accessGroup.addView(RadioButton(this).apply { id = 200 + v; text = label })
+        }
+        accessGroup.check(200 + prefs.access)
+        accessGroup.setOnCheckedChangeListener { _, id ->
+            prefs.access = id - 200
+            // Restart the helper with the new method.
+            val wasRunning = OverlayService.running
+            Priv.shutdown()
+            Priv.ensureBound()
+            if (wasRunning) OverlayService.refresh(this)
+            refreshStatus()
+        }
+        root.addView(accessGroup)
+
         toggle = Button(this).apply {
             textSize = 18f
             setOnClickListener {
@@ -160,7 +190,7 @@ class MainActivity : Activity() {
         hint(root, "Shown per core cluster from slowest to fastest, in GHz (e.g. 1.0|0.6|0.8 GHz)")
         check(root, "RAM usage (system + current app)", prefs.showRam) { prefs.showRam = it }
         check(root, "Swap (ZRAM + memory extension / virtual RAM)", prefs.showSwap) { prefs.showSwap = it }
-        check(root, "GPU load + frequency (experimental — not accurate on MediaTek)", prefs.showGpu) { prefs.showGpu = it }
+        check(root, "GPU load + frequency (accurate with root; experimental without)", prefs.showGpu) { prefs.showGpu = it }
         check(root, "Temperatures (SoC / battery)", prefs.showTemps) { prefs.showTemps = it }
 
         section(root, "Appearance & sampling")

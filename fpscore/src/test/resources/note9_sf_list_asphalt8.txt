@@ -1,0 +1,8 @@
+Display Root#0
+AppWindowToken{48ef434 token=Token{49dbb07 ActivityRecord{370dd46 u0 com.gameloft.android.ANMP.GloftA8HM/.MainActivity t67}}}#0
+81ce710 com.gameloft.android.ANMP.GloftA8HM/com.gameloft.android.ANMP.GloftA8HM.MainActivity#0
+Background for -SurfaceView - com.gameloft.android.ANMP.GloftA8HM/com.gameloft.android.ANMP.GloftA8HM.MainActivity#0
+Bounds for - com.gameloft.android.ANMP.GloftA8HM/com.gameloft.android.ANMP.GloftA8HM.MainActivity#0
+SurfaceView - com.gameloft.android.ANMP.GloftA8HM/com.gameloft.android.ANMP.GloftA8HM.MainActivity#0
+com.gameloft.android.ANMP.GloftA8HM/com.gameloft.android.ANMP.GloftA8HM.MainActivity#0
+Display Overlays#0

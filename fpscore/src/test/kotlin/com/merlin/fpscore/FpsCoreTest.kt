@@ -355,4 +355,51 @@ class FpsCoreTest {
         assertEquals(game, LayerChooser.choose(game, 0, true, emptyList()))
         assertEquals(null, LayerChooser.choose(null, 0, false, emptyList()))
     }
+
+    // ── Redmi Note 9 (MT6768 / Helio G85, Android 10, rooted) ────────────────
+
+    @Test fun android10ThermalNamesAreNormalized() {
+        val m = ThermalParser.parse(res("note9_thermalservice_a10.txt"))
+        assertNotNull("CPU_T should map to CPU: $m", m["CPU"])
+        assertNotNull(m["GPU"]); assertNotNull(m["BATTERY"])
+    }
+
+    @Test fun android10FocusAndAsphaltLayer() {
+        val comp = LayerResolver.focusedComponent(res("note9_window_focus_asphalt8.txt"))!!
+        assertEquals("com.gameloft.android.ANMP.GloftA8HM/com.gameloft.android.ANMP.GloftA8HM.MainActivity", comp)
+        val c = LayerResolver.candidates(res("note9_sf_list_asphalt8.txt"), LayerResolver.packageOf(comp), comp)
+        assertEquals("SurfaceView - com.gameloft.android.ANMP.GloftA8HM/com.gameloft.android.ANMP.GloftA8HM.MainActivity#0", c[0])
+        assertTrue(c.none { it.startsWith("AppWindowToken{") })
+        val p = LatencyParser()
+        val buf = LongArray(256)
+        val n = p.parse(res("note9_latency_asphalt8.txt"), buf)
+        assertEquals(16_675_003L, p.refreshPeriodNs)
+        assertTrue(n > 60)
+    }
+
+    @Test fun rootGpuNodesOnMali() {
+        assertEquals(63, GpuSysfs.parseLoad("/proc/mali/utilization", res("note9_mali_utilization.txt")))
+        assertEquals(1000, GpuSysfs.parseFreqMHz("/proc/gpufreq/gpufreq_var_dump", res("note9_gpufreq_var_dump.txt")))
+        assertEquals(56, GpuSysfs.parseLoad("/sys/module/ged/parameters/gpu_loading", "56\n"))
+    }
+
+    @Test fun rootGpuNodesOnAdreno() {
+        assertEquals(45, GpuSysfs.parseLoad("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage", "45 %\n"))
+        assertEquals(587, GpuSysfs.parseFreqMHz("/sys/class/kgsl/kgsl-3d0/gpuclk", "587000000\n"))
+    }
+
+    @Test fun thermalZonesPickHottestSocSensorAndDropAbsentOnes() {
+        val zones = res("note9_thermal_zones.txt").lines().mapNotNull { l ->
+            val i = l.indexOf('=')
+            if (i < 0) null else ThermalZones.parse(l.substring(0, i), l.substring(i + 1))
+        }
+        assertTrue(zones.none { it.celsius < -40f }) // -127000 sensors removed
+        val soc = ThermalZones.socTemp(zones)
+        assertTrue("soc=$soc", soc in 30f..100f)
+        val cpu = zones.first { it.type == "mtktscpu" }.celsius
+        val ap = zones.first { it.type == "mtktsAP" }.celsius
+        assertEquals(maxOf(cpu, ap), soc, 0.01f)
+        assertEquals(zones.first { it.type == "mtktsbattery" }.celsius, ThermalZones.batteryTemp(zones), 0.01f)
+        assertTrue(zones.none { it.type == "mtktspmic" && ThermalZones.isSocZone(it.type) })
+    }
 }

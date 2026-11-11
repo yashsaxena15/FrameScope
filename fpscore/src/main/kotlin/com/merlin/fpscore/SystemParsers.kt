@@ -58,9 +58,18 @@ object ThermalParser {
             val m = ENTRY.find(line) ?: continue
             val v = m.groupValues[1].toFloatOrNull() ?: continue
             if (v.isNaN()) continue
-            out[m.groupValues[3].trim()] = v
+            out[normalizeName(m.groupValues[3].trim())] = v
         }
         return out
+    }
+
+    /** Android 10 HALs report "CPU_T", "BAT_T", …; map them to the standard names. */
+    fun normalizeName(name: String): String {
+        val n = name.uppercase().removeSuffix("_T").removeSuffix("-T")
+        return when (n) {
+            "BAT", "BATT" -> "BATTERY"
+            else -> n
+        }
     }
 
     private fun section(dump: CharSequence, header: String): List<String> {

@@ -65,6 +65,11 @@ class Prefs(ctx: Context) {
         get() = sp.getInt("y", DEFAULT_Y)
         set(v) = sp.edit().putInt("y", v).apply()
 
+    /** How the privileged helper is started: [ACCESS_AUTO], [ACCESS_SHIZUKU] or [ACCESS_ROOT]. */
+    var access: Int
+        get() = sp.getInt("access", ACCESS_AUTO)
+        set(v) = sp.edit().putInt("access", v).apply()
+
     /** Locked overlays ignore touches (they pass through to the game). */
     var locked: Boolean
         get() = sp.getBoolean("locked", false)
@@ -78,6 +83,10 @@ class Prefs(ctx: Context) {
     }
 
     companion object {
+        /** Shizuku when it is running and granted, otherwise root (su) if present. */
+        const val ACCESS_AUTO = 0
+        const val ACCESS_SHIZUKU = 1
+        const val ACCESS_ROOT = 2
         const val DEFAULT_X = 24
         const val DEFAULT_Y = 160
         const val PRESET_MINIMAL = 0

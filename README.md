@@ -41,7 +41,9 @@ uses almost no memory or CPU, and has **no internet permission**.
 ## Requirements
 
 - Android **10 or newer** (Android 11+ recommended: Shizuku can then start over Wireless debugging without a PC)
-- [Shizuku](https://github.com/RikkaApps/Shizuku/releases), started via Wireless debugging, `adb`, or root
+- **One of:**
+  - [Shizuku](https://github.com/RikkaApps/Shizuku/releases), started via Wireless debugging, `adb`, or root
+  - **Root** (Magisk, KernelSU or APatch). FrameScope can use `su` directly, without Shizuku.
 
 ## Installation
 
@@ -76,6 +78,16 @@ uses almost no memory or CPU, and has **no internet permission**.
 - *1% low* is the FPS equivalent of the average of the slowest 1% of frame times. *0.1% low* is the same for the slowest 0.1%.
 - A *jank* is a frame that took more than twice the average of the previous three frames **and** longer than two display refreshes.
 
+## Root mode
+
+On rooted phones, FrameScope reads the hardware directly and shows more:
+
+- **Accurate GPU load and frequency** from the GPU driver (Mali `/proc/mali`, MediaTek `gpufreq` / GED, Adreno `kgsl`). Enable *GPU load + frequency* in settings.
+- **Real SoC temperature** from the chip's own thermal sensors (the hottest one, which is what throttling reacts to).
+- **Throttling marker (▼)** when a CPU cluster's maximum frequency is being limited.
+
+Choose **Settings → Access method**: *Auto* (Shizuku if granted, otherwise root), *Shizuku only*, or *Root only*. Root mode is read-only: FrameScope never changes CPU or GPU settings.
+
 ## Tested devices
 
 | Device | SoC | Android | Status |
@@ -83,6 +95,7 @@ uses almost no memory or CPU, and has **no internet permission**.
 | POCO X8 Pro Max | MediaTek Dimensity 9500s | 16 (HyperOS 3) | ✅ Verified (120 Hz) |
 | vivo 1938 | MediaTek Helio P35 (MT6765) | 12 | ✅ Verified (60 Hz) |
 | Redmi 10A | MediaTek Helio G25 (MT6762) | 11 (MIUI 12.5) | ✅ Verified (60 Hz) |
+| Redmi Note 9 | MediaTek Helio G85 (MT6768) | 10 (Nusantara, rooted) | ✅ Verified (60 Hz, root GPU + sensors) |
 
 FrameScope only uses standard Android and Linux interfaces, so it is expected to
 work on other devices too. If something looks wrong on your phone, open
@@ -101,7 +114,7 @@ FrameScope collects nothing and has **no internet permission**. See [PRIVACY.md]
 
 ## Known limitations
 
-- **GPU load and frequency** is an experimental option, off by default. Without root, most phones block the GPU's sysfs nodes, and on MediaTek Dimensity 9000+ the available kernel events do not reflect the real GPU clock.
+- **GPU load and frequency without root** is experimental and off by default. Most phones block the GPU's driver files without root, and on MediaTek Dimensity 9000+ the available kernel events do not reflect the real GPU clock. With root it is accurate.
 - **Temperatures.** Without root, many phones report one chip-wide value for CPU and GPU, so FrameScope shows it once as *SoC*.
 
 ## Building

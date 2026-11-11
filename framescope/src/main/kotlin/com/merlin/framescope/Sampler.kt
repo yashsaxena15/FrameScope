@@ -11,11 +11,13 @@ import android.os.SystemClock
 import com.merlin.fpscore.CpuLoad
 import com.merlin.fpscore.FpsStats
 import com.merlin.fpscore.FrameTracker
+import com.merlin.fpscore.GpuSysfs
 import com.merlin.fpscore.LatencyParser
 import com.merlin.fpscore.LayerChooser
 import com.merlin.fpscore.LayerResolver
 import com.merlin.fpscore.MemInfo
 import com.merlin.fpscore.ThermalParser
+import com.merlin.fpscore.ThermalZones
 
 /** Everything the overlay draws. Primitive fields only, copied under a lock. */
 class Snapshot {
@@ -37,6 +39,10 @@ class Snapshot {
     var gpuBusy = -1f
     var gpuMHz = -1
     var gpuState = 0 // 1 ok, 0 waiting, -1 unavailable
+    /** True when GPU values come from real driver nodes (root, or readable sysfs). */
+    var gpuAccurate = false
+    /** True while any cluster's max frequency is limited below its hardware max. */
+    var cpuCapped = false
     var tSoc = Float.NaN
     var tBattery = Float.NaN
     var ramUsedMB = -1
@@ -52,7 +58,8 @@ class Snapshot {
         System.arraycopy(o.graph, 0, graph, 0, o.graphN); graphN = o.graphN
         cpuLoad = o.cpuLoad
         System.arraycopy(o.clusterMHz, 0, clusterMHz, 0, o.clusters); clusters = o.clusters
-        gpuBusy = o.gpuBusy; gpuMHz = o.gpuMHz; gpuState = o.gpuState
+        gpuBusy = o.gpuBusy; gpuMHz = o.gpuMHz; gpuState = o.gpuState; gpuAccurate = o.gpuAccurate
+        cpuCapped = o.cpuCapped
         tSoc = o.tSoc; tBattery = o.tBattery
         ramUsedMB = o.ramUsedMB; ramTotalMB = o.ramTotalMB; appRamMB = o.appRamMB
         swapUsedMB = o.swapUsedMB; swapTotalMB = o.swapTotalMB
@@ -102,6 +109,15 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private var lastSvc: PrivApi? = null
 
     private var clusterPaths: Array<String>? = null
+    private var clusterLimitPaths: Array<String> = emptyArray()
+    private var clusterHwMaxKHz: LongArray = LongArray(0)
+
+    // Driver-level sources, detected once per helper process (null = not readable).
+    private var sourcesProbed = false
+    private var gpuLoadPath: String? = null
+    private var gpuFreqPath: String? = null
+    private var socZonePaths: Array<String> = emptyArray()
+    private var batteryZonePath: String? = null
     private var cpuPaths: Array<String> = emptyArray()
 
     private var pollMs = 250L
@@ -184,6 +200,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
                 Priv.State.NO_SHIZUKU -> "Shizuku not running"
                 Priv.State.NO_PERMISSION -> "Shizuku permission needed"
                 Priv.State.FAILED -> "Helper failed (see app)"
+                Priv.State.NO_ROOT -> "Root not available"
                 else -> "Connecting…"
             }
             work.fps = -1f
@@ -196,6 +213,7 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             lastSvc = svc
             gpuStarted = false
             clusterPaths = null
+            sourcesProbed = false
             appPid = -1
             appPidFor = null
             component = null
@@ -269,6 +287,24 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         }
         if (wantTemps && now >= nextTempAt) {
             nextTempAt = now + 2000
+            if (!sourcesProbed) probeSources(svc)
+            if (socZonePaths.isNotEmpty()) {
+                // Real sensors (root): hottest SoC zone = what throttling reacts to.
+                val paths = if (batteryZonePath != null) socZonePaths + batteryZonePath!! else socZonePaths
+                val r = svc.readTexts(paths)
+                var hottest = Float.NaN
+                for (i in socZonePaths.indices) {
+                    val c = ThermalZones.parse("soc", r.getOrNull(i))?.celsius ?: continue
+                    if (hottest.isNaN() || c > hottest) hottest = c
+                }
+                if (!hottest.isNaN()) {
+                    work.tSoc = hottest
+                    work.tBattery = if (batteryZonePath != null)
+                        ThermalZones.parse("battery", r.getOrNull(socZonePaths.size))?.celsius ?: Float.NaN else Float.NaN
+                    if (work.tBattery.isNaN()) batteryOnlyTemp()
+                    return
+                }
+            }
             val t = ThermalParser.parse(svc.dump("thermalservice", emptyArray()) ?: "")
             // HyperOS (and many vendors) report one chip-wide temperature under the
             // CPU/GPU/NPU/SOC labels; show it once as "SoC" instead of implying
@@ -327,9 +363,12 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
                 .sortedWith(compareBy({ maxes.getOrNull(it)?.trim()?.toLongOrNull() ?: Long.MAX_VALUE },
                     { names[it].removePrefix("policy").toIntOrNull() ?: 0 }))
                 .map { names[it] }
-            val paths = policies.take(Snapshot.MAX_CLUSTERS).map { "$base/$it/scaling_cur_freq" }
+            val kept = policies.take(Snapshot.MAX_CLUSTERS)
+            val paths = kept.map { "$base/$it/scaling_cur_freq" }
             clusterPaths = paths.toTypedArray()
-            cpuPaths = (paths + "/proc/stat").toTypedArray()
+            clusterLimitPaths = kept.map { "$base/$it/scaling_max_freq" }.toTypedArray()
+            clusterHwMaxKHz = kept.map { p -> maxes.getOrNull(names.indexOf(p))?.trim()?.toLongOrNull() ?: 0L }.toLongArray()
+            cpuPaths = (paths + "/proc/stat" + clusterLimitPaths).toTypedArray()
         }
         val res = svc.readTexts(cpuPaths)
         val nClusters = clusterPaths!!.size
@@ -343,6 +382,47 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         if (stat != null) {
             cpuLoad.update(stat)
             work.cpuLoad = cpuLoad.load[0]
+        }
+        // Thermal / power capping: scaling_max_freq pulled below the hardware max.
+        // (Not readable on some phones, e.g. HyperOS without root: then never "capped".)
+        var capped = false
+        for (i in 0 until nClusters) {
+            val lim = res.getOrNull(nClusters + 1 + i)?.trim()?.toLongOrNull() ?: continue
+            val hw = clusterHwMaxKHz.getOrElse(i) { 0L }
+            if (hw > 0 && lim < hw * 98 / 100) capped = true
+        }
+        work.cpuCapped = capped
+    }
+
+    /**
+     * Looks once for GPU and thermal nodes that this helper can read. With root
+     * (or on phones that expose them to shell) these replace the less accurate
+     * sources: perfetto GPU events and the thermal service.
+     */
+    private fun probeSources(svc: PrivApi) {
+        sourcesProbed = true
+        val loads = svc.readTexts(GpuSysfs.LOAD_PATHS)
+        gpuLoadPath = GpuSysfs.LOAD_PATHS.indices.firstOrNull { i ->
+            loads.getOrNull(i)?.let { GpuSysfs.parseLoad(GpuSysfs.LOAD_PATHS[i], it) >= 0 } == true
+        }?.let { GpuSysfs.LOAD_PATHS[it] }
+        val freqs = svc.readTexts(GpuSysfs.FREQ_PATHS)
+        gpuFreqPath = GpuSysfs.FREQ_PATHS.indices.firstOrNull { i ->
+            freqs.getOrNull(i)?.let { GpuSysfs.parseFreqMHz(GpuSysfs.FREQ_PATHS[i], it) > 0 } == true
+        }?.let { GpuSysfs.FREQ_PATHS[it] }
+
+        val base = "/sys/class/thermal"
+        val zones = svc.listDir(base).filter { it.startsWith("thermal_zone") }
+        if (zones.isNotEmpty()) {
+            val types = svc.readTexts(zones.map { "$base/$it/type" }.toTypedArray())
+            val temps = svc.readTexts(zones.map { "$base/$it/temp" }.toTypedArray())
+            val soc = ArrayList<String>()
+            for (i in zones.indices) {
+                val z = ThermalZones.parse(types.getOrNull(i), temps.getOrNull(i)) ?: continue
+                val path = "$base/${zones[i]}/temp"
+                if (ThermalZones.isSocZone(z.type)) soc.add(path)
+                else if (batteryZonePath == null && ThermalZones.isBatteryZone(z.type)) batteryZonePath = path
+            }
+            socZonePaths = soc.toTypedArray()
         }
     }
 
@@ -380,6 +460,20 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     }
 
     private fun sampleGpu(svc: PrivApi) {
+        if (!sourcesProbed) probeSources(svc)
+        val lp = gpuLoadPath
+        val fp = gpuFreqPath
+        if (lp != null || fp != null) {
+            val r = svc.readTexts(arrayOf(lp ?: "", fp ?: ""))
+            val load = if (lp != null) r.getOrNull(0)?.let { GpuSysfs.parseLoad(lp, it) } ?: -1 else -1
+            val mhz = if (fp != null) r.getOrNull(1)?.let { GpuSysfs.parseFreqMHz(fp, it) } ?: -1 else -1
+            work.gpuBusy = if (load >= 0) load.toFloat() else -1f
+            work.gpuMHz = mhz
+            work.gpuState = 1
+            work.gpuAccurate = true
+            return
+        }
+        work.gpuAccurate = false
         if (!gpuStarted) {
             gpuStarted = true
             if (!svc.gpuStart()) {

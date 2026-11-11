@@ -1,0 +1,4 @@
+  Display: mDisplayId=0
+  mCurrentFocus=Window{81ce710 u0 com.gameloft.android.ANMP.GloftA8HM/com.gameloft.android.ANMP.GloftA8HM.MainActivity}
+  mFocusedApp=AppWindowToken{48ef434 token=Token{49dbb07 ActivityRecord{370dd46 u0 com.gameloft.android.ANMP.GloftA8HM/.MainActivity t67}}}
+    mFocusedApp=Token{49dbb07 ActivityRecord{370dd46 u0 com.gameloft.android.ANMP.GloftA8HM/.MainActivity t67}}

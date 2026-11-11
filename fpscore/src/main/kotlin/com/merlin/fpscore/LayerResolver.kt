@@ -33,6 +33,8 @@ object LayerResolver {
             name.startsWith("Bounds for") ||
             name.startsWith("Surface(name=") ||
             name.startsWith("ActivityRecord{") ||
+            name.startsWith("AppWindowToken{") || // Android 10 window-token container
+            name.startsWith("Token{") ||
             name.startsWith("Task=") ||
             name.contains("ActivityRecordInputSink") ||
             name.contains("rotation-leash") ||
