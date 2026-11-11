@@ -118,13 +118,13 @@ object Priv {
                 PrivMain::class.java.name
             val useShizuku = canUseShizuku()
             val su = if (useShizuku) null else suPath()
-            proc = if (useShizuku) {
+            val p: Process = if (useShizuku) {
                 newProcess(arrayOf("sh", "-c", launch))
             } else {
                 // Root: the same helper, started by su. Magisk/KernelSU asks the user once.
                 ProcessBuilder(su ?: "su", "-c", launch).start()
             }
-            val p = proc
+            proc = p
             val stderr = StringBuilder()
             Thread({
                 try {
