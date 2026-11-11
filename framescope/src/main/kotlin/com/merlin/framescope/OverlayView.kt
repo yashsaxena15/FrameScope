@@ -109,13 +109,7 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
                 heightPx = (bigH + 2 * pad).toInt()
             }
             Prefs.PRESET_COMPACT -> {
-                // Widest realistic content: "144 FPS · CPU 100% · RAM 100% · 100°"
-                val w = compactVal.measureText("144") + compactLabel.measureText(" FPS") +
-                    3 * compactLabel.measureText(SEP) +
-                    compactLabel.measureText("CPU ") + compactVal.measureText("100%") +
-                    compactLabel.measureText("RAM ") + compactVal.measureText("100%") +
-                    compactVal.measureText("100°")
-                widthPx = (w + 2 * pad + 2 * density).toInt()
+                widthPx = compactWidth(compactHasGpu)
                 heightPx = (compactVal.fontSpacing + 1.4f * pad).toInt()
             }
             else -> {
@@ -268,8 +262,29 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         }
     }
 
-    /** `60 FPS · CPU 23% · RAM 79% · 42°` — or the status message when not connected. */
+    /** Whether the Compact line currently includes the GPU segment (only with an accurate source). */
+    private var compactHasGpu = false
+
+    /** Widest realistic content: "144 FPS · CPU 100% · GPU 100% · RAM 100% · 100°". */
+    private fun compactWidth(withGpu: Boolean): Int {
+        var w = compactVal.measureText("144") + compactLabel.measureText(" FPS") +
+            3 * compactLabel.measureText(SEP) +
+            compactLabel.measureText("CPU ") + compactVal.measureText("100%") +
+            compactLabel.measureText("RAM ") + compactVal.measureText("100%") +
+            compactVal.measureText("100°")
+        if (withGpu) w += compactLabel.measureText(SEP + "GPU ") + compactVal.measureText("100%")
+        return (w + 2 * pad + 2 * density).toInt()
+    }
+
+    /** `60 FPS · CPU 23% · GPU 45% · RAM 79% · 42°` — or the status message when not connected. */
     private fun drawCompact(canvas: Canvas) {
+        val hasGpu = snap.gpuAccurate && snap.gpuBusy >= 0f
+        if (hasGpu != compactHasGpu) {
+            // GPU source appeared / disappeared: resize once, outside of this draw pass.
+            compactHasGpu = hasGpu
+            widthPx = compactWidth(hasGpu)
+            post { requestLayout() }
+        }
         val y = (height - compactVal.descent() - compactVal.ascent()) / 2f
         var x = pad
         if (snap.status.isNotEmpty() && snap.fps < 0f) {
@@ -287,6 +302,14 @@ class OverlayView(ctx: Context, private val sampler: Sampler, private val prefs:
         if (snap.cpuLoad < 0f) sb.append("--") else appendFixed(sb, snap.cpuLoad, 0)
         sb.append('%')
         x = seg(canvas, x, y, compactVal)
+        // GPU % (only from the GPU driver: root, or phones that expose it)
+        if (hasGpu) {
+            x = label(canvas, x, y, SEP + "GPU ")
+            sb.setLength(0)
+            appendFixed(sb, snap.gpuBusy, 0)
+            sb.append('%')
+            x = seg(canvas, x, y, compactVal)
+        }
         // RAM % (whole device)
         x = label(canvas, x, y, SEP + "RAM ")
         sb.setLength(0)

@@ -31,7 +31,7 @@ uses almost no memory or CPU, and has **no internet permission**.
 - **Temperatures.** SoC and battery, from Android's thermal service.
 - **Four presets:**
   - **Minimal:** FPS only.
-  - **Compact:** one line with FPS, CPU %, RAM % and SoC temperature.
+  - **Compact:** one line with FPS, CPU %, GPU % (with root), RAM % and SoC temperature.
   - **Standard:** FPS stats + graph.
   - **Full:** Standard + CPU, RAM and temperatures.
 - **Made for gaming.** Drag to position, lock to let touches pass through, adjustable size and opacity. **Double-tap to reset stats** at the start of a match.
@@ -59,7 +59,7 @@ uses almost no memory or CPU, and has **no internet permission**.
 
 ## Reading the overlay
 
-**Compact preset:** `60 FPS · CPU 23% · RAM 79% · 42°` shows FPS, total CPU usage, RAM used by the whole device, and SoC temperature.
+**Compact preset:** `60 FPS · CPU 23% · GPU 45% · RAM 79% · 42°` shows FPS, total CPU usage, GPU usage, RAM used by the whole device, and SoC temperature. GPU appears only when FrameScope can read it from the GPU driver (root, or phones that allow it).
 
 **Standard / Full presets:**
 
@@ -96,6 +96,8 @@ Choose **Settings → Access method**: *Auto* (Shizuku if granted, otherwise roo
 | vivo 1938 | MediaTek Helio P35 (MT6765) | 12 | ✅ Verified (60 Hz) |
 | Redmi 10A | MediaTek Helio G25 (MT6762) | 11 (MIUI 12.5) | ✅ Verified (60 Hz) |
 | Redmi Note 9 | MediaTek Helio G85 (MT6768) | 10 (Nusantara, rooted) | ✅ Verified (60 Hz, root GPU + sensors) |
+| Infinix Note 50X | MediaTek Dimensity 7300 Ultimate | 16 | ✅ Tested |
+| Motorola Edge 40 Neo | MediaTek Dimensity 7030 | 15 | ✅ Tested |
 
 FrameScope only uses standard Android and Linux interfaces, so it is expected to
 work on other devices too. If something looks wrong on your phone, open

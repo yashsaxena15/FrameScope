@@ -167,7 +167,7 @@ class MainActivity : Activity() {
         // Display order; ids are 100 + the stored preset value.
         val presets = arrayOf(
             Prefs.PRESET_MINIMAL to "Minimal — FPS number only",
-            Prefs.PRESET_COMPACT to "Compact — FPS, CPU %, RAM %, SoC temperature in one line",
+            Prefs.PRESET_COMPACT to "Compact — FPS, CPU %, GPU % (with root), RAM %, SoC temperature in one line",
             Prefs.PRESET_STANDARD to "Standard — FPS, avg, 1%/0.1% low, frame-time graph",
             Prefs.PRESET_FULL to "Full — Standard + CPU, RAM, temperatures"
         )

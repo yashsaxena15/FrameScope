@@ -131,6 +131,8 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
     private var extras = false
     private var wantCpu = false
     private var wantGpu = false
+    /** Compact preset: GPU only from driver nodes, never the experimental perfetto path. */
+    private var gpuDriverOnly = false
     private var wantTemps = false
     private var wantRam = false
     /** Per-app RAM needs a pid lookup; the Compact preset only shows system RAM %. */
@@ -186,7 +188,8 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
         extras = prefs.wantsExtras
         val compact = prefs.preset == Prefs.PRESET_COMPACT
         wantCpu = compact || (extras && (prefs.showCpuLoad || prefs.showCpuFreq))
-        wantGpu = extras && prefs.showGpu
+        wantGpu = (extras && prefs.showGpu) || compact
+        gpuDriverOnly = compact
         wantTemps = compact || (extras && prefs.showTemps)
         wantRam = compact || (extras && prefs.showRam)
         wantAppRam = extras && prefs.showRam
@@ -508,6 +511,12 @@ class Sampler(private val ctx: Context, private val prefs: Prefs, private val on
             return
         }
         work.gpuAccurate = false
+        if (gpuDriverOnly) {
+            // No accurate source on this phone: Compact hides the GPU segment.
+            work.gpuState = -1
+            work.gpuBusy = -1f
+            return
+        }
         if (!gpuStarted) {
             gpuStarted = true
             if (!svc.gpuStart()) {

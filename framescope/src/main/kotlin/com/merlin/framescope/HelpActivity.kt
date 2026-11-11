@@ -39,7 +39,7 @@ class HelpActivity : Activity() {
         item("Graph", "time of each of the last 120 frames; spikes are slow frames. The green line is one screen refresh.")
 
         section("Compact preset")
-        item("60 FPS · CPU 23% · RAM 79% · 42°", "frames per second, total CPU usage, RAM used by the whole device, and SoC temperature, in one line.")
+        item("60 FPS · CPU 23% · GPU 45% · RAM 79% · 42°", "frames per second, total CPU usage, GPU usage, RAM used by the whole device, and SoC temperature, in one line. GPU appears only when FrameScope can read it from the GPU driver (root, or phones that allow it), because the alternative is not accurate.")
 
         section("System (Full preset)")
         item("CPU 50%", "total CPU usage across all cores.")
